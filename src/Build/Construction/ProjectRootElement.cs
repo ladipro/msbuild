@@ -1684,11 +1684,6 @@ namespace Microsoft.Build.Construction
             // Reload should only mutate the state if there are no parse errors.
             ThrowIfDocumentHasParsingErrors(document);
 
-            // Do not clear the string cache.
-            // Based on the assumption that Projects are reloaded repeatedly from their file with small increments,
-            // and thus most strings would get reused
-            //this.XmlDocument.ClearAnyCachedStrings();
-
             RemoveAllChildren();
 
             ProjectParser.Parse(document, this);

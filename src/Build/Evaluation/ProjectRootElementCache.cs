@@ -314,11 +314,6 @@ namespace Microsoft.Build.Evaluation
                 LinkedList<ProjectRootElement> oldStrongCache = _strongCache;
                 _strongCache = new LinkedList<ProjectRootElement>();
 
-                foreach (ProjectRootElement projectRootElement in oldStrongCache)
-                {
-                    RaiseProjectRootElementRemovedFromStrongCache(projectRootElement);
-                }
-
                 // A scavenge of the weak cache is probably not worth it as 
                 // the GC would have had to run immediately after the line above.
             }
@@ -335,11 +330,6 @@ namespace Microsoft.Build.Evaluation
                 LinkedList<ProjectRootElement> oldStrongCache = _strongCache;
                 _weakCache = new WeakValueDictionary<string, ProjectRootElement>(StringComparer.OrdinalIgnoreCase);
                 _strongCache = new LinkedList<ProjectRootElement>();
-
-                foreach (ProjectRootElement projectRootElement in oldStrongCache)
-                {
-                    RaiseProjectRootElementRemovedFromStrongCache(projectRootElement);
-                }
             }
         }
 
@@ -376,7 +366,6 @@ namespace Microsoft.Build.Evaluation
                         else
                         {
                             _strongCache.Remove(rootElement);
-                            RaiseProjectRootElementRemovedFromStrongCache(rootElement);
                         }
                     }
                 }
@@ -442,7 +431,6 @@ namespace Microsoft.Build.Evaluation
             if (existingWeakEntry != null && !Object.ReferenceEquals(existingWeakEntry, projectRootElement))
             {
                 _strongCache.Remove(existingWeakEntry);
-                RaiseProjectRootElementRemovedFromStrongCache(existingWeakEntry);
             }
 
             DebugTraceCache("Adding: ", projectRootElement.FullPath);
@@ -488,7 +476,6 @@ namespace Microsoft.Build.Evaluation
 
                 DebugTraceCache("Shedding: ", node.Value.FullPath);
                 _strongCache.Remove(node);
-                RaiseProjectRootElementRemovedFromStrongCache(node.Value);
             }
         }
 
@@ -508,7 +495,6 @@ namespace Microsoft.Build.Evaluation
             if (strongCacheEntry != null)
             {
                 _strongCache.Remove(strongCacheEntry);
-                RaiseProjectRootElementRemovedFromStrongCache(strongCacheEntry.Value);
             }
         }
 

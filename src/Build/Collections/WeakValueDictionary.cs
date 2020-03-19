@@ -107,29 +107,34 @@ namespace Microsoft.Build.Collections
 
             set
             {
-                // Make some attempt to prevent dictionary growing forever with
-                // entries whose underlying key or value has already been collected.
-                // We do not have access to the dictionary's true capacity or growth
-                // method, so we improvise with our own.
-                // So attempt to make room for the upcoming add before we do it.
-                if (_dictionary.Count == _capacity)
-                {
-                    Scavenge();
-
-                    // If that didn't do anything, raise the capacity at which 
-                    // we next scavenge. Note that we never shrink, but neither
-                    // does the underlying dictionary.
-                    if (_dictionary.Count == _capacity)
-                    {
-                        _capacity = _dictionary.Count * 2;
-                    }
-                }
-
                 // Use a null value to represent real null, as opposed to a collected real value
                 WeakReference<V> wrappedValue = (value == null) ? null : new WeakReference<V>(value);
 
-                _dictionary[key] = wrappedValue;
+                SetWeakReference(key, wrappedValue);
             }
+        }
+
+        public void SetWeakReference(K key, WeakReference<V> wrappedValue)
+        {
+            // Make some attempt to prevent dictionary growing forever with
+            // entries whose underlying key or value has already been collected.
+            // We do not have access to the dictionary's true capacity or growth
+            // method, so we improvise with our own.
+            // So attempt to make room for the upcoming add before we do it.
+            if (_dictionary.Count == _capacity)
+            {
+                Scavenge();
+
+                // If that didn't do anything, raise the capacity at which 
+                // we next scavenge. Note that we never shrink, but neither
+                // does the underlying dictionary.
+                if (_dictionary.Count == _capacity)
+                {
+                    _capacity = _dictionary.Count * 2;
+                }
+            }
+
+            _dictionary[key] = wrappedValue;
         }
 
         /// <summary>

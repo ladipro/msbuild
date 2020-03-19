@@ -218,7 +218,7 @@ namespace Microsoft.Build.Construction
                 text = String.Empty;
             }
 
-            string interned = StringCache.Add(text, this);
+            string interned = StringCache.Add(text);
             return base.CreateWhitespace(interned);
         }
 
@@ -234,7 +234,7 @@ namespace Microsoft.Build.Construction
                 text = String.Empty;
             }
 
-            string interned = StringCache.Add(text, this);
+            string interned = StringCache.Add(text);
             return base.CreateSignificantWhitespace(interned);
         }
 
@@ -244,7 +244,7 @@ namespace Microsoft.Build.Construction
         /// </summary>
         public override XmlText CreateTextNode(string text)
         {
-            string textNode = StringCache.Add(text, this);
+            string textNode = StringCache.Add(text);
             return base.CreateTextNode(textNode);
         }
 
@@ -259,7 +259,7 @@ namespace Microsoft.Build.Construction
                 data = String.Empty;
             }
 
-            string interned = StringCache.Add(data, this);
+            string interned = StringCache.Add(data);
             return base.CreateComment(interned);
         }
 
@@ -312,16 +312,6 @@ namespace Microsoft.Build.Construction
         internal static void ClearReadOnlyFlags_UnitTestsOnly()
         {
             s_readOnlyFlags = ReadOnlyLoadFlags.Undefined;
-        }
-
-        /// <summary>
-        /// Called when the XmlDocument is unloaded to remove this XML's
-        /// contribution to the string interning cache.
-        /// Does NOT zombie the ProjectRootElement or anything else.
-        /// </summary>
-        internal void ClearAnyCachedStrings()
-        {
-            StringCache.Clear(this);
         }
 
         /// <summary>

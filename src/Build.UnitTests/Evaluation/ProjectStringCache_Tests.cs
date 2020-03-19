@@ -3,6 +3,7 @@
 
 using System.IO;
 using System.Text;
+using System.Runtime.CompilerServices;
 using System.Xml;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
@@ -242,6 +243,8 @@ namespace Microsoft.Build.UnitTests.OM.Evaluation
 
                 // Now remove one document
                 collection.UnloadProject(pre1);
+                pre1 = null;
+                System.GC.Collect();
 
                 // We should still be able to get Content
                 itemGroupContent = cache.Get("Content");
@@ -249,9 +252,11 @@ namespace Microsoft.Build.UnitTests.OM.Evaluation
 
                 // Now remove the second document
                 collection.UnloadProject(pre2);
+                System.GC.Collect();
 
                 // Now we should not be able to get Content
                 itemGroupContent = cache.Get("Content");
+                Assert.Equal(0, cache.Count);
                 Assert.Null(itemGroupContent);
 
                 // And there should be no entries
@@ -264,18 +269,15 @@ namespace Microsoft.Build.UnitTests.OM.Evaluation
         }
 
         /// <summary>
-        /// Adding a string equivalent to an existing instance and under the same document should
-        /// return the existing instance.
+        /// Adding a string equivalent to an existing instance should return the existing instance.
         /// </summary>
         [Fact]
-        public void AddReturnsSameInstanceForSameDocument()
+        public void AddReturnsSameInstanceForSameString()
         {
             ProjectStringCache cache = new ProjectStringCache();
 
-            XmlDocument document = new XmlDocument();
-
             string stringToAdd = "Test1";
-            string return1 = cache.Add(stringToAdd, document);
+            string return1 = cache.Add(stringToAdd);
 
             // Content of string should be the same.
             Assert.Equal(1, cache.Count);
@@ -286,7 +288,7 @@ namespace Microsoft.Build.UnitTests.OM.Evaluation
             builder.Append("Test");
             builder.Append("1");
 
-            string return2 = cache.Add(builder.ToString(), document);
+            string return2 = cache.Add(builder.ToString());
 
             // Content of string should be the same.            
             Assert.Equal(builder.ToString(), return2);
@@ -298,183 +300,39 @@ namespace Microsoft.Build.UnitTests.OM.Evaluation
             Assert.Equal(1, cache.Count);
         }
 
-        /// <summary>
-        /// Adding a string equivalent to an existing instance but under a different document 
-        /// should return the existing instance.
-        /// </summary>
-        [Fact]
-        public void AddReturnsSameInstanceForDifferentDocument()
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void AddStringToCache(ProjectStringCache cache)
         {
-            ProjectStringCache cache = new ProjectStringCache();
-
-            XmlDocument document = new XmlDocument();
-
-            string stringToAdd = "Test1";
-            string return1 = cache.Add(stringToAdd, document);
-
-            // Content of string should be the same.
-            Assert.Equal(stringToAdd, return1);
-
             // Build a new string guaranteed not to be optimized by the compiler into the same instance.
             StringBuilder builder = new StringBuilder();
             builder.Append("Test");
-            builder.Append("1");
-            XmlDocument document2 = new XmlDocument();
-
-            string return2 = cache.Add(builder.ToString(), document2);
-
-            // Content of string should be the same.
-            Assert.Equal(builder.ToString(), return2);
-
-            // Returned references should be the same
-            Assert.Same(return1, return2);
-
-            // Should not have added any new string instances to the cache.
-            Assert.Equal(1, cache.Count);
+            builder.Append("1x");
+            cache.Add(builder.ToString());
         }
 
         /// <summary>
-        /// Removing the last document containing an instance of a string should remove the string entry.
-        /// A subsequent add should then return a different instance.
+        /// Collecing a string should remove the corresponding string entry.
         /// </summary>
-        /// <remarks>
-        /// WHITEBOX ASSUMPTION:
-        /// The following method assumes knowledge of the ProjectStringCache internal implementation
-        /// details, and may become invalid if those details change.
-        /// </remarks>        
         [Fact]
-        public void RemoveLastInstanceDeallocatesEntry()
+        public void CollectInstanceDeallocatesEntry()
         {
             ProjectStringCache cache = new ProjectStringCache();
 
-            XmlDocument document = new XmlDocument();
+            AddStringToCache(cache);
 
-            string stringToAdd = "Test1";
-            string return1 = cache.Add(stringToAdd, document);
-
-            cache.Clear(document);
+            System.GC.Collect();
 
             // Should be no instances left.
             Assert.Equal(0, cache.Count);
 
             // Build a new string guaranteed not to be optimized by the compiler into the same instance.
-            StringBuilder builder = new StringBuilder();
-            builder.Append("Test");
-            builder.Append("1");
-            XmlDocument document2 = new XmlDocument();
+            //builder.Append("Test");
+            //builder.Append("1");
 
-            string return2 = cache.Add(builder.ToString(), document2);
+            //string return2 = cache.Add(builder.ToString());
 
             // Returned references should NOT be the same
-            Assert.NotSame(return1, return2);
-        }
-
-        /// <summary>
-        /// Removing one document containing a string which already existed in the collection 
-        /// should still leave a reference in the collection, so that a subsequent add will
-        /// return the existing reference.
-        /// </summary>
-        [Fact]
-        public void RemoveOneInstance()
-        {
-            ProjectStringCache cache = new ProjectStringCache();
-
-            XmlDocument document = new XmlDocument();
-
-            string stringToAdd = "Test1";
-            string return1 = cache.Add(stringToAdd, document);
-            Assert.Equal(1, cache.Count);
-
-            XmlDocument document2 = new XmlDocument();
-            cache.Add(stringToAdd, document2);
-            Assert.Equal(1, cache.Count);
-
-            cache.Clear(document2);
-
-            // Since there is still one document referencing the string, it should remain.
-            Assert.Equal(1, cache.Count);
-
-            // Build a new string guaranteed not to be optimized by the compiler into the same instance.
-            StringBuilder builder = new StringBuilder();
-            builder.Append("Test");
-            builder.Append("1");
-            XmlDocument document3 = new XmlDocument();
-
-            string return3 = cache.Add(builder.ToString(), document3);
-
-            // Returned references should be the same
-            Assert.Same(return1, return3);
-
-            // Still should only be one cached instance.
-            Assert.Equal(1, cache.Count);
-        }
-
-        /// <summary>
-        /// Different strings should get their own entries.
-        /// </summary>
-        [Fact]
-        public void DifferentStringsSameDocument()
-        {
-            ProjectStringCache cache = new ProjectStringCache();
-
-            XmlDocument document = new XmlDocument();
-
-            string stringToAdd = "Test1";
-            cache.Add(stringToAdd, document);
-            Assert.Equal(1, cache.Count);
-
-            stringToAdd = "Test2";
-            string return2 = cache.Add(stringToAdd, document);
-
-            // The second string gets its own instance.
-            Assert.Equal(2, cache.Count);
-
-            // Build a new string guaranteed not to be optimized by the compiler into the same instance.
-            StringBuilder builder = new StringBuilder();
-            builder.Append("Test");
-            builder.Append("2");
-            string return3 = cache.Add(builder.ToString(), document);
-
-            // The new string should be the same as the other one already in the collection.
-            Assert.Same(return2, return3);
-
-            // No new instances for string with the same content.
-            Assert.Equal(2, cache.Count);
-        }
-
-        /// <summary>
-        /// Different strings should get their own entries.
-        /// </summary>
-        [Fact]
-        public void DifferentStringsDifferentDocuments()
-        {
-            ProjectStringCache cache = new ProjectStringCache();
-
-            XmlDocument document = new XmlDocument();
-
-            string stringToAdd = "Test1";
-            cache.Add(stringToAdd, document);
-            Assert.Equal(1, cache.Count);
-
-            stringToAdd = "Test2";
-            XmlDocument document2 = new XmlDocument();
-            string return2 = cache.Add(stringToAdd, document2);
-
-            // The second string gets its own instance.
-            Assert.Equal(2, cache.Count);
-
-            // Build a new string guaranteed not to be optimized by the compiler into the same instance.
-            StringBuilder builder = new StringBuilder();
-            builder.Append("Test");
-            builder.Append("2");
-            XmlDocument document3 = new XmlDocument();
-            string return3 = cache.Add(builder.ToString(), document3);
-
-            // The new string should be the same as the other one already in the collection.
-            Assert.Same(return2, return3);
-
-            // No new instances for string with the same content.
-            Assert.Equal(2, cache.Count);
+            //Assert.NotSame(return1, return2);
         }
     }
 }
