@@ -28,12 +28,12 @@ namespace Microsoft.Build.Construction
         /// <summary>
         /// Store interned strings, and also a ref count, one per document using them.
         /// </summary>
-        private RetrievableEntryHashSet<StringCacheEntry> _strings = new RetrievableEntryHashSet<StringCacheEntry>(InitialSize, StringComparer.Ordinal);
+        private Dictionary<string, StringCacheEntry> _strings = new Dictionary<string, StringCacheEntry>(InitialSize);
 
         /// <summary>
         /// Store all the strings a document is using, so their ref count can be decremented.
         /// </summary>
-        private Dictionary<XmlDocument, HashSet<StringCacheEntry>> _documents = new Dictionary<XmlDocument, HashSet<StringCacheEntry>>();
+        private Dictionary<XmlDocument, HashSet<string>> _documents = new Dictionary<XmlDocument, HashSet<string>>();
 
         /// <summary>
         /// Locking object for this shared cache
@@ -85,7 +85,7 @@ namespace Microsoft.Build.Construction
                 VerifyState();
 
                 StringCacheEntry entry;
-                HashSet<StringCacheEntry> entries;
+                HashSet<string> entries;
 
                 bool seenString = _strings.TryGetValue(key, out entry);
                 bool seenDocument = _documents.TryGetValue(document, out entries);
@@ -93,23 +93,23 @@ namespace Microsoft.Build.Construction
                 if (!seenString)
                 {
                     entry = new StringCacheEntry(key);
-                    _strings.Add(entry);
                 }
 
                 if (!seenDocument)
                 {
-                    entries = new HashSet<StringCacheEntry>();
+                    entries = new HashSet<string>();
                     _documents.Add(document, entries);
                 }
 
-                bool seenStringInThisDocument = seenString && seenDocument && entries.Contains(entry);
+                bool seenStringInThisDocument = seenString && seenDocument && entries.Contains(key);
 
                 if (!seenStringInThisDocument)
                 {
-                    entries.Add(entry);
+                    entries.Add(key);
 
                     // We've been referred to by a new document, so increment our ref count.
-                    entry.Increment();
+                    entry = entry.Increment();
+                    _strings[key] = entry;
                 }
 
                 VerifyState();
@@ -159,17 +159,19 @@ namespace Microsoft.Build.Construction
 
                 VerifyState();
 
-                HashSet<StringCacheEntry> entries;
+                HashSet<string> entries;
                 if (_documents.TryGetValue(document, out entries))
                 {
-                    foreach (var entry in entries)
+                    foreach (var key in entries)
                     {
-                        string str = entry.CachedString;
-                        entry.Decrement();
-
-                        if (entry.RefCount == 0)
+                        StringCacheEntry entry = _strings[key];
+                        if (entry.RefCount == 1)
                         {
-                            _strings.Remove(str);
+                            _strings.Remove(key);
+                        }
+                        else
+                        {
+                            _strings[key] = entry.Decrement();
                         }
                     }
 
@@ -187,21 +189,21 @@ namespace Microsoft.Build.Construction
         [Conditional("NEVER")]
         private void VerifyState()
         {
-            HashSet<StringCacheEntry> uniqueEntries = new HashSet<StringCacheEntry>();
-            foreach (var entries in _documents.Values)
-            {
-                foreach (var entry in entries)
-                {
-                    uniqueEntries.Add(entry);
-                    ErrorUtilities.VerifyThrow(entry.RefCount > 0, "extra deref");
+            //HashSet<StringCacheEntry> uniqueEntries = new HashSet<StringCacheEntry>();
+            //foreach (var entries in _documents.Values)
+            //{
+            //    foreach (var entry in entries)
+            //    {
+            //        uniqueEntries.Add(entry);
+            //        ErrorUtilities.VerifyThrow(entry.RefCount > 0, "extra deref");
 
-                    // We only ever create one StringCacheEntry instance per unique string, and that instance should be 
-                    // the same in both collections.
-                    ErrorUtilities.VerifyThrow(Object.ReferenceEquals(entry, _strings[entry.CachedString]), "bad state");
-                }
-            }
+            //        // We only ever create one StringCacheEntry instance per unique string, and that instance should be 
+            //        // the same in both collections.
+            //        ErrorUtilities.VerifyThrow(Object.ReferenceEquals(entry, _strings[entry.CachedString]), "bad state");
+            //    }
+            //}
 
-            ErrorUtilities.VerifyThrow(uniqueEntries.Count == _strings.Count, "bad state");
+            //ErrorUtilities.VerifyThrow(uniqueEntries.Count == _strings.Count, "bad state");
         }
 
         /// <summary>
@@ -221,10 +223,9 @@ namespace Microsoft.Build.Construction
 
         /// <summary>
         /// Represents an entry in the ProjectStringCache.
-        /// Can't be a struct because the copy-by-value and the ref counting don't go well together.
         /// </summary>
         [DebuggerDisplay("Count={_refCount} String={_cachedString}")]
-        private class StringCacheEntry : IKeyed
+        private struct StringCacheEntry
         {
             /// <summary>
             /// Cached string
@@ -244,6 +245,12 @@ namespace Microsoft.Build.Construction
             {
                 _cachedString = str;
                 _refCount = 0;
+            }
+
+            internal StringCacheEntry(string str, int refCount)
+            {
+                _cachedString = str;
+                _refCount = refCount;
             }
 
             /// <summary>
@@ -278,19 +285,29 @@ namespace Microsoft.Build.Construction
             /// Indicates that this entry is included in the given document.
             /// Callers must verify that we were not already adreffed for this document.
             /// </summary>
-            internal void Increment()
+            internal StringCacheEntry Increment()
             {
-                _refCount++;
+                return new StringCacheEntry(_cachedString, _refCount + 1);
             }
 
             /// <summary>
             /// Removes a container for this entry.
             /// Callers must verify that this was not already reffed and not subsequently dereffed.
             /// </summary>
-            internal void Decrement()
+            internal StringCacheEntry Decrement()
             {
                 ErrorUtilities.VerifyThrow(_refCount > 0, "extra deref");
-                _refCount--;
+                return new StringCacheEntry(_cachedString, _refCount - 1);
+            }
+
+            public override int GetHashCode()
+            {
+                return _cachedString.GetHashCode();
+            }
+
+            public override bool Equals(object other)
+            {
+                return String.Equals(_cachedString, other);
             }
         }
     }
