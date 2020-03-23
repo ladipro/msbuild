@@ -3,6 +3,7 @@
 
 using Microsoft.Build.Construction;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Shared;
 
 namespace Microsoft.Build.BackEnd.SdkResolution
 {
@@ -13,7 +14,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
     internal sealed class SdkResolverRequest : INodePacket
     {
         private BuildEventContext _buildEventContext;
-        private ElementLocation _elementLocation;
+        private IElementLocation _elementLocation;
         private string _minimumVersion;
         private string _name;
         private string _projectPath;
@@ -27,7 +28,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
             Translate(translator);
         }
 
-        private SdkResolverRequest(int submissionId, string name, string version, string minimumVersion, BuildEventContext buildEventContext, ElementLocation elementLocation, string solutionPath, string projectPath, bool interactive)
+        private SdkResolverRequest(int submissionId, string name, string version, string minimumVersion, BuildEventContext buildEventContext, IElementLocation elementLocation, string solutionPath, string projectPath, bool interactive)
         {
             _buildEventContext = buildEventContext;
             _submissionId = submissionId;
@@ -42,7 +43,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
 
         public BuildEventContext BuildEventContext => _buildEventContext;
 
-        public ElementLocation ElementLocation => _elementLocation;
+        public IElementLocation ElementLocation => _elementLocation;
 
         public bool Interactive => _interactive;
 
@@ -62,7 +63,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
 
         public string Version => _version;
 
-        public static SdkResolverRequest Create(int submissionId, SdkReference sdkReference, BuildEventContext buildEventContext, ElementLocation elementLocation, string solutionPath, string projectPath, bool interactive)
+        public static SdkResolverRequest Create(int submissionId, SdkReference sdkReference, BuildEventContext buildEventContext, IElementLocation elementLocation, string solutionPath, string projectPath, bool interactive)
         {
             return new SdkResolverRequest(submissionId, sdkReference.Name, sdkReference.Version, sdkReference.MinimumVersion, buildEventContext, elementLocation, solutionPath, projectPath, interactive);
         }
@@ -75,7 +76,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
         public void Translate(ITranslator translator)
         {
             translator.Translate(ref _buildEventContext);
-            translator.Translate(ref _elementLocation, ElementLocation.FactoryForDeserialization);
+            //translator.Translate(ref _elementLocation, ElementLocation.FactoryForDeserialization);
             translator.Translate(ref _minimumVersion);
             translator.Translate(ref _name);
             translator.Translate(ref _projectPath);

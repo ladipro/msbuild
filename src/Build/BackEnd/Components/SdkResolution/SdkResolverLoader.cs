@@ -21,7 +21,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
 #endif
 
         internal virtual IList<SdkResolver> LoadResolvers(LoggingContext loggingContext,
-            ElementLocation location)
+            IElementLocation location)
         {
             // Always add the default resolver
             var resolvers = new List<SdkResolver> {new DefaultSdkResolver()};
@@ -48,7 +48,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
         /// </summary>
         /// <param name="rootFolder"></param>
         /// <returns></returns>
-        internal virtual IList<string> FindPotentialSdkResolvers(string rootFolder, ElementLocation location)
+        internal virtual IList<string> FindPotentialSdkResolvers(string rootFolder, IElementLocation location)
         {
             var assembliesList = new List<string>();
 
@@ -77,7 +77,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
             return assembliesList;
         }
 
-        private bool TryAddAssemblyFromManifest(string pathToManifest, string manifestFolder, List<string> assembliesList, ElementLocation location)
+        private bool TryAddAssemblyFromManifest(string pathToManifest, string manifestFolder, List<string> assembliesList, IElementLocation location)
         {
             if (!string.IsNullOrEmpty(pathToManifest) && !FileUtilities.FileExistsNoThrow(pathToManifest)) return false;
 
@@ -133,7 +133,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
                 .Select(t => t.type);
         }
 
-        protected virtual Assembly LoadResolverAssembly(string resolverPath, LoggingContext loggingContext, ElementLocation location)
+        protected virtual Assembly LoadResolverAssembly(string resolverPath, LoggingContext loggingContext, IElementLocation location)
         {
 #if !FEATURE_ASSEMBLYLOADCONTEXT
             return Assembly.LoadFrom(resolverPath);
@@ -142,7 +142,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
 #endif
         }
 
-        protected virtual void LoadResolvers(string resolverPath, LoggingContext loggingContext, ElementLocation location, List<SdkResolver> resolvers)
+        protected virtual void LoadResolvers(string resolverPath, LoggingContext loggingContext, IElementLocation location, List<SdkResolver> resolvers)
         {
             Assembly assembly;
             try

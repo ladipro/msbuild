@@ -87,7 +87,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
         }
 
         /// <inheritdoc cref="ISdkResolverService.ResolveSdk"/>
-        public virtual SdkResult ResolveSdk(int submissionId, SdkReference sdk, LoggingContext loggingContext, ElementLocation sdkReferenceLocation, string solutionPath, string projectPath, bool interactive)
+        public virtual SdkResult ResolveSdk(int submissionId, SdkReference sdk, LoggingContext loggingContext, IElementLocation sdkReferenceLocation, string solutionPath, string projectPath, bool interactive)
         {
             // Lazy initialize the SDK resolvers
             if (_resolvers == null)
@@ -191,7 +191,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
             _resolvers = resolvers;
         }
 
-        private static void LogWarnings(LoggingContext loggingContext, ElementLocation location, SdkResult result)
+        private static void LogWarnings(LoggingContext loggingContext, IElementLocation location, SdkResult result)
         {
             if (result.Warnings == null)
             {
@@ -225,7 +225,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
             return null;
         }
 
-        private void Initialize(LoggingContext loggingContext, ElementLocation location)
+        private void Initialize(LoggingContext loggingContext, IElementLocation location)
         {
             lock (_lockObject)
             {

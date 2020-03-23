@@ -105,7 +105,7 @@ namespace Microsoft.Build.Evaluation
             this.TrackPropertyWrite(
                 originalProperty,
                 newProperty,
-                propertyElement.Location.LocationString,
+                propertyElement.InternalLocation.LocationString,
                 PropertySource.Xml);
 
             return newProperty;

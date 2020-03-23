@@ -18,12 +18,19 @@ namespace Microsoft.Build.Construction
     /// C# doesn't currently allow covariance in method overloading, only on delegates.
     /// The caller must bravely downcast.
     /// </remarks>
-    internal class XmlElementWithLocation : XmlElement, IXmlLineInfo, ILinkedXml
+    internal class XmlElementWithLocation : XmlElement, IXmlLineInfo, ILinkedXml, IElementLocation
     {
+        private static int _totalCreated = 0;
+        private static int _totalQueried = 0;
+
         /// <summary>
-        /// Line, column, file information
+        /// Line, column, file information. Populated lazily.
         /// </summary>
         private ElementLocation _elementLocation;
+        private bool _elementLocationQueried = false;
+
+        private ushort _locationLine;
+        private ushort _locationColumn;
 
         /// <summary>
         /// Constructor without location information
@@ -43,10 +50,19 @@ namespace Microsoft.Build.Construction
             // In the past we pointed to the column of the open angle bracket whereas the XmlTextReader points to the first character of the element name.
             // In well formed XML these are always adjacent on the same line, so it's safe to subtract one.
             // If we're loading from a stream it's zero, so don't subtract one.
-            XmlDocumentWithLocation documentWithLocation = (XmlDocumentWithLocation)document;
-
             int adjustedColumn = (columnNumber == 0) ? columnNumber : columnNumber - 1;
-            _elementLocation = ElementLocation.Create(documentWithLocation.FullPath, lineNumber, adjustedColumn);
+            _totalCreated++;
+
+            if (lineNumber <= 65535 && columnNumber <= 65535)
+            {
+                this._locationLine = Convert.ToUInt16(lineNumber);
+                this._locationColumn = Convert.ToUInt16(columnNumber);
+            }
+            else
+            {
+                XmlDocumentWithLocation documentWithLocation = (XmlDocumentWithLocation)document;
+                _elementLocation = ElementLocation.Create(documentWithLocation.FullPath, lineNumber, adjustedColumn);
+            }
         }
 
         ProjectElementLink ILinkedXml.Link => null;
@@ -76,6 +92,26 @@ namespace Microsoft.Build.Construction
             { return Location.Column; }
         }
 
+        internal ElementLocation TrueLocation
+        {
+            get
+            {
+                if (_elementLocation == null)
+                {
+                    if (!_elementLocationQueried)
+                    {
+                        _totalQueried++;
+                        Console.WriteLine("### ELEM Total queried/created: {0}/{1}", _totalQueried, _totalCreated);
+                    }
+                    _elementLocationQueried = true;
+
+                    XmlDocumentWithLocation ownerDocumentWithLocation = (XmlDocumentWithLocation)OwnerDocument;
+                    _elementLocation = ElementLocation.Create(ownerDocumentWithLocation.FullPath, _locationLine, _locationColumn);
+                }
+                return _elementLocation;
+            }
+        }
+
         /// <summary>
         /// Provides an ElementLocation for this element, using the path to the file containing
         /// this element as the project file entry.
@@ -87,18 +123,11 @@ namespace Microsoft.Build.Construction
         /// even if it wasn't loaded from disk, or has been edited since. That's because we set that
         /// path on our XmlDocumentWithLocation wrapper class.
         /// </remarks>
-        internal ElementLocation Location
+        internal IElementLocation Location
         {
             get
             {
-                // Caching the element location object saves significant memory
-                XmlDocumentWithLocation ownerDocumentWithLocation = (XmlDocumentWithLocation)OwnerDocument;
-                if (!String.Equals(_elementLocation.File, ownerDocumentWithLocation.FullPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    _elementLocation = ElementLocation.Create(ownerDocumentWithLocation.FullPath, _elementLocation.Line, _elementLocation.Column);
-                }
-
-                return _elementLocation;
+                return this;
             }
         }
 
@@ -151,7 +180,21 @@ namespace Microsoft.Build.Construction
         {
             XmlAttributeWithLocation attributeWithLocation = GetAttributeWithLocation(name);
 
-            return (attributeWithLocation != null) ? attributeWithLocation.Location : null;
+            return (attributeWithLocation != null) ? attributeWithLocation.TrueLocation : null;
         }
+
+        string IElementLocation.File
+        {
+            get
+            {
+                XmlDocumentWithLocation documentWithLocation = (XmlDocumentWithLocation)OwnerDocument;
+                return documentWithLocation.FullPath ?? String.Empty;
+
+            }
+        }
+        int IElementLocation.Line => TrueLocation.Line;
+        int IElementLocation.Column => TrueLocation.Column;
+        string IElementLocation.LocationString => TrueLocation.LocationString;
+        public void Translate(Microsoft.Build.BackEnd.ITranslator translator) => ((Microsoft.Build.BackEnd.ITranslatable)TrueLocation).Translate(translator);
     }
 }

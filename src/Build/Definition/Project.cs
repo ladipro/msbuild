@@ -1587,7 +1587,7 @@ namespace Microsoft.Build.Evaluation
                 return false;
             }
 
-            ErrorUtilities.VerifyThrowInvalidOperation(!ThrowInsteadOfSplittingItemElement, "OM_CannotSplitItemElementWhenSplittingIsDisabled", itemElement.Location, $"{nameof(Project)}.{nameof(ThrowInsteadOfSplittingItemElement)}");
+            ErrorUtilities.VerifyThrowInvalidOperation(!ThrowInsteadOfSplittingItemElement, "OM_CannotSplitItemElementWhenSplittingIsDisabled", itemElement.InternalLocation, $"{nameof(Project)}.{nameof(ThrowInsteadOfSplittingItemElement)}");
 
             var relevantItems = new List<ProjectItem>();
 
@@ -1657,7 +1657,7 @@ namespace Microsoft.Build.Evaluation
         /// <remarks>
         /// On project in order to keep Project's expander hidden.
         /// </remarks>
-        internal string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, ElementLocation propertyLocation)
+        internal string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, IElementLocation propertyLocation)
         {
             return implementationInternal.ExpandPropertyValueBestEffortLeaveEscaped(unevaluatedValue, propertyLocation);
         }
@@ -1687,7 +1687,7 @@ namespace Microsoft.Build.Evaluation
         /// <remarks>
         /// On project in order to keep Project's expander hidden.
         /// </remarks>
-        internal string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, ElementLocation metadataLocation)
+        internal string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, IElementLocation metadataLocation)
         {
             return implementationInternal.ExpandMetadataValueBestEffortLeaveEscaped(metadataTable, unevaluatedValue, metadataLocation);
         }
@@ -1719,7 +1719,7 @@ namespace Microsoft.Build.Evaluation
         internal void VerifyThrowInvalidOperationNotImported(ProjectRootElement otherXml)
         {
             ErrorUtilities.VerifyThrowInternalNull(otherXml, nameof(otherXml));
-            ErrorUtilities.VerifyThrowInvalidOperation(ReferenceEquals(Xml, otherXml), "OM_CannotModifyEvaluatedObjectInImportedFile", otherXml.Location.File);
+            ErrorUtilities.VerifyThrowInvalidOperation(ReferenceEquals(Xml, otherXml), "OM_CannotModifyEvaluatedObjectInImportedFile", otherXml.InternalLocation.File);
         }
 
 
@@ -2874,7 +2874,7 @@ namespace Microsoft.Build.Evaluation
                     _data.Properties[name] = property;
                 }
 
-                property.UpdateEvaluatedValue(ExpandPropertyValueBestEffortLeaveEscaped(unevaluatedValue, property.Xml.Location));
+                property.UpdateEvaluatedValue(ExpandPropertyValueBestEffortLeaveEscaped(unevaluatedValue, property.Xml.InternalLocation));
 
                 return property;
             }
@@ -3314,7 +3314,7 @@ namespace Microsoft.Build.Evaluation
                     return false;
                 }
 
-                ErrorUtilities.VerifyThrowInvalidOperation(!ThrowInsteadOfSplittingItemElement, "OM_CannotSplitItemElementWhenSplittingIsDisabled", itemElement.Location, $"{nameof(Project)}.{nameof(ThrowInsteadOfSplittingItemElement)}");
+                ErrorUtilities.VerifyThrowInvalidOperation(!ThrowInsteadOfSplittingItemElement, "OM_CannotSplitItemElementWhenSplittingIsDisabled", itemElement.InternalLocation, $"{nameof(Project)}.{nameof(ThrowInsteadOfSplittingItemElement)}");
 
                 var relevantItems = new List<ProjectItem>();
 
@@ -3417,7 +3417,7 @@ namespace Microsoft.Build.Evaluation
             /// <remarks>
             /// On project in order to keep Project's expander hidden.
             /// </remarks>
-            public string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, ElementLocation propertyLocation)
+            public string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, IElementLocation propertyLocation)
             {
                 string evaluatedValueEscaped = _data.Expander.ExpandIntoStringLeaveEscaped(unevaluatedValue, ExpanderOptions.ExpandProperties, propertyLocation);
 
@@ -3463,7 +3463,7 @@ namespace Microsoft.Build.Evaluation
             /// <remarks>
             /// On project in order to keep Project's expander hidden.
             /// </remarks>
-            public string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, ElementLocation metadataLocation)
+            public string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, IElementLocation metadataLocation)
             {
                 ErrorUtilities.VerifyThrow(_data.Expander.Metadata == null, "Should be null");
 
@@ -3494,7 +3494,7 @@ namespace Microsoft.Build.Evaluation
             internal void VerifyThrowInvalidOperationNotImported(ProjectRootElement otherXml)
             {
                 ErrorUtilities.VerifyThrowInternalNull(otherXml, nameof(otherXml));
-                ErrorUtilities.VerifyThrowInvalidOperation(ReferenceEquals(Xml, otherXml), "OM_CannotModifyEvaluatedObjectInImportedFile", otherXml.Location.File);
+                ErrorUtilities.VerifyThrowInvalidOperation(ReferenceEquals(Xml, otherXml), "OM_CannotModifyEvaluatedObjectInImportedFile", otherXml.InternalLocation.File);
             }
 
             /// <summary>
@@ -3867,11 +3867,11 @@ namespace Microsoft.Build.Evaluation
 
             void ReAddExistingItemAfterItemTypeChange(ProjectItem item);
 
-            string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, ElementLocation propertyLocation);
+            string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, IElementLocation propertyLocation);
 
             string ExpandItemIncludeBestEffortLeaveEscaped(ProjectItemElement renamedItemElement);
 
-            string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, ElementLocation metadataLocation);
+            string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, IElementLocation metadataLocation);
         }
 
         private class ProjectLinkInternalNotImplemented : IProjectLinkInternal
@@ -3892,11 +3892,11 @@ namespace Microsoft.Build.Evaluation
 
             public void ReAddExistingItemAfterItemTypeChange(ProjectItem item) { throw new NotImplementedException(); }
 
-            public string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, ElementLocation propertyLocation) { throw new NotImplementedException(); }
+            public string ExpandPropertyValueBestEffortLeaveEscaped(string unevaluatedValue, IElementLocation propertyLocation) { throw new NotImplementedException(); }
 
             public string ExpandItemIncludeBestEffortLeaveEscaped(ProjectItemElement renamedItemElement) { throw new NotImplementedException(); }
 
-            public string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, ElementLocation metadataLocation) { throw new NotImplementedException(); }
+            public string ExpandMetadataValueBestEffortLeaveEscaped(IMetadataTable metadataTable, string unevaluatedValue, IElementLocation metadataLocation) { throw new NotImplementedException(); }
         }
 
         /// <summary>

@@ -2616,7 +2616,7 @@ namespace Microsoft.Build.Execution
             this.EvaluatedItemElements = new List<ProjectItemElement>();
 
             _explicitToolsVersionSpecified = (explicitToolsVersion != null);
-            ElementLocation toolsVersionLocation = xml.Location;
+            IElementLocation toolsVersionLocation = xml.InternalLocation;
 
             if (xml.ToolsVersion.Length > 0)
             {

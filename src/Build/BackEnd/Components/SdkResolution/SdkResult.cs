@@ -42,7 +42,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
         {
         }
 
-        public Construction.ElementLocation ElementLocation { get; set; }
+        public Shared.IElementLocation ElementLocation { get; set; }
 
         public IEnumerable<string> Errors { get; }
 

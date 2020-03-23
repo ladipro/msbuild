@@ -308,13 +308,13 @@ namespace Microsoft.Build.Engine.UnitTests.BackEnd
 
         private class MockSdkResolverLoader : SdkResolverLoader
         {
-            public Func<string, LoggingContext, ElementLocation, Assembly> LoadResolverAssemblyFunc { get; set; }
+            public Func<string, LoggingContext, IElementLocation, Assembly> LoadResolverAssemblyFunc { get; set; }
 
-            public Func<string, ElementLocation, IList<string>> FindPotentialSdkResolversFunc { get; set; }
+            public Func<string, IElementLocation, IList<string>> FindPotentialSdkResolversFunc { get; set; }
 
             public Func<Assembly, IEnumerable<Type>> GetResolverTypesFunc { get; set; }
 
-            protected override Assembly LoadResolverAssembly(string resolverPath, LoggingContext loggingContext, ElementLocation location)
+            protected override Assembly LoadResolverAssembly(string resolverPath, LoggingContext loggingContext, IElementLocation location)
             {
                 if (LoadResolverAssemblyFunc != null)
                 {
@@ -334,7 +334,7 @@ namespace Microsoft.Build.Engine.UnitTests.BackEnd
                 return base.GetResolverTypes(assembly);
             }
 
-            internal override IList<string> FindPotentialSdkResolvers(string rootFolder, ElementLocation location)
+            internal override IList<string> FindPotentialSdkResolvers(string rootFolder, IElementLocation location)
             {
                 if (FindPotentialSdkResolversFunc != null)
                 {

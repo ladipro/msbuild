@@ -54,7 +54,7 @@ namespace Microsoft.Build.Internal
         /// <summary>
         /// Throw an invalid project exception indicating that the child is not valid beneath the element
         /// </summary>
-        internal static void ThrowProjectInvalidChildElement(string name, string parentName, ElementLocation location)
+        internal static void ThrowProjectInvalidChildElement(string name, string parentName, IElementLocation location)
         {
             ProjectErrorUtilities.ThrowInvalidProject(location, "UnrecognizedChildElement", name, parentName);
         }

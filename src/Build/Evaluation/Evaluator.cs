@@ -818,7 +818,7 @@ namespace Microsoft.Build.Evaluation
                 {
                     foreach (string propertyName in _expander.ExpandIntoStringListLeaveEscaped(currentProjectOrImport.TreatAsLocalProperty, ExpanderOptions.ExpandProperties, currentProjectOrImport.TreatAsLocalPropertyLocation))
                     {
-                        XmlUtilities.VerifyThrowProjectValidElementName(propertyName, currentProjectOrImport.Location);
+                        XmlUtilities.VerifyThrowProjectValidElementName(propertyName, currentProjectOrImport.InternalLocation);
                         _data.GlobalPropertiesToTreatAsLocal.Add(propertyName);
                     }
                 }
@@ -1059,7 +1059,7 @@ namespace Microsoft.Build.Evaluation
             ProjectTargetInstance otherTarget = _data.GetTarget(targetName);
             if (otherTarget != null)
             {
-                _evaluationLoggingContext.LogComment(MessageImportance.Low, "OverridingTarget", otherTarget.Name, otherTarget.Location.File, targetName, targetElement.Location.File);
+                _evaluationLoggingContext.LogComment(MessageImportance.Low, "OverridingTarget", otherTarget.Name, otherTarget.Location.File, targetName, targetElement.InternalLocation.File);
             }
 
             LinkedListNode<ProjectTargetElement> node;
@@ -1329,7 +1329,7 @@ namespace Microsoft.Build.Evaluation
                 // it is the same as what we are setting the value on. Note: This needs to be set before we expand the property we are currently setting.
                 _expander.UsedUninitializedProperties.CurrentlyEvaluatingPropertyElementName = propertyElement.Name;
 
-                string evaluatedValue = _expander.ExpandIntoStringLeaveEscaped(propertyElement.Value, ExpanderOptions.ExpandProperties, propertyElement.Location);
+                string evaluatedValue = _expander.ExpandIntoStringLeaveEscaped(propertyElement.Value, ExpanderOptions.ExpandProperties, propertyElement.InternalLocation);
 
                 // If we are going to set a property to a value other than null or empty we need to check to see if it has been used
                 // during evaluation.
@@ -1343,7 +1343,7 @@ namespace Microsoft.Build.Evaluation
                     {
                         // Once we are going to warn for a property once, remove it from the list so we do not add it again.
                         _expander.UsedUninitializedProperties.Properties.Remove(propertyElement.Name);
-                        _evaluationLoggingContext.LogWarning(null, new BuildEventFileInfo(propertyElement.Location), "UsedUninitializedProperty", propertyElement.Name, elementWhichUsedProperty.LocationString);
+                        _evaluationLoggingContext.LogWarning(null, new BuildEventFileInfo(propertyElement.InternalLocation), "UsedUninitializedProperty", propertyElement.Name, elementWhichUsedProperty.LocationString);
                     }
                 }
 
@@ -1356,7 +1356,7 @@ namespace Microsoft.Build.Evaluation
 
                     if (predecessor != null)
                     {
-                        LogPropertyReassignment(predecessor, property, propertyElement.Location.LocationString);
+                        LogPropertyReassignment(predecessor, property, propertyElement.InternalLocation.LocationString);
                     }
                 }
                 else
@@ -1433,7 +1433,7 @@ namespace Microsoft.Build.Evaluation
                 {
                     if (EvaluateCondition(metadataElement, ExpanderOptions.ExpandPropertiesAndMetadata, ParserOptions.AllowPropertiesAndCustomMetadata))
                     {
-                        string evaluatedValue = _expander.ExpandIntoStringLeaveEscaped(metadataElement.Value, ExpanderOptions.ExpandPropertiesAndCustomMetadata, itemDefinitionElement.Location);
+                        string evaluatedValue = _expander.ExpandIntoStringLeaveEscaped(metadataElement.Value, ExpanderOptions.ExpandPropertiesAndCustomMetadata, itemDefinitionElement.InternalLocation);
 
                         M predecessor = itemDefinition.GetMetadata(metadataElement.Name);
 
@@ -1749,13 +1749,13 @@ namespace Microsoft.Build.Evaluation
                     string expanded = _expander.ExpandIntoStringAndUnescape(importElement.Condition, ExpanderOptions.ExpandProperties | ExpanderOptions.LeavePropertiesUnexpandedOnError, importElement.ConditionLocation);
 
                     ProjectImportedEventArgs eventArgs = new ProjectImportedEventArgs(
-                        importElement.Location.Line,
-                        importElement.Location.Column,
+                        importElement.InternalLocation.Line,
+                        importElement.InternalLocation.Column,
                         ResourceUtilities.GetResourceString("ProjectImportSkippedFalseCondition"),
                         importElement.Project,
                         importElement.ContainingProject.FullPath,
-                        importElement.Location.Line,
-                        importElement.Location.Column,
+                        importElement.InternalLocation.Line,
+                        importElement.InternalLocation.Column,
                         importElement.Condition,
                         expanded)
                     {
@@ -1784,15 +1784,15 @@ namespace Microsoft.Build.Evaluation
                 var projectPath = _data.GetProperty(ReservedPropertyNames.projectFullPath)?.EvaluatedValue;
 
                 // Combine SDK path with the "project" relative path
-                sdkResult = _sdkResolverService.ResolveSdk(_submissionId, importElement.ParsedSdkReference, _evaluationLoggingContext, importElement.Location, solutionPath, projectPath, _interactive);
+                sdkResult = _sdkResolverService.ResolveSdk(_submissionId, importElement.ParsedSdkReference, _evaluationLoggingContext, importElement.InternalLocation, solutionPath, projectPath, _interactive);
 
                 if (!sdkResult.Success)
                 {
                     if (_loadSettings.HasFlag(ProjectLoadSettings.IgnoreMissingImports))
                     {
                         ProjectImportedEventArgs eventArgs = new ProjectImportedEventArgs(
-                            importElement.Location.Line,
-                            importElement.Location.Column,
+                            importElement.InternalLocation.Line,
+                            importElement.InternalLocation.Column,
                             ResourceUtilities.GetResourceString("CouldNotResolveSdk"),
                             importElement.ParsedSdkReference.ToString())
                         {
@@ -1830,7 +1830,7 @@ namespace Microsoft.Build.Evaluation
                                             bool throwOnFileNotExistsError, out List<ProjectRootElement> imports)
         {
             string importExpressionEscaped = _expander.ExpandIntoStringLeaveEscaped(unescapedExpression, ExpanderOptions.ExpandProperties, importElement.ProjectLocation);
-            ElementLocation importLocationInProject = importElement.Location;
+            IElementLocation importLocationInProject = importElement.InternalLocation;
 
             if (String.IsNullOrWhiteSpace(importExpressionEscaped))
             {
@@ -1869,13 +1869,13 @@ namespace Microsoft.Build.Evaluation
                     if (_logProjectImportedEvents)
                     {
                         ProjectImportedEventArgs eventArgs = new ProjectImportedEventArgs(
-                            importElement.Location.Line,
-                            importElement.Location.Column,
+                            importElement.InternalLocation.Line,
+                            importElement.InternalLocation.Column,
                             ResourceUtilities.GetResourceString("ProjectImportSkippedNoMatches"),
                             importExpressionEscapedItem,
                             importElement.ContainingProject.FullPath,
-                            importElement.Location.Line,
-                            importElement.Location.Column)
+                            importElement.InternalLocation.Line,
+                            importElement.InternalLocation.Column)
                         {
                             BuildEventContext = _evaluationLoggingContext.BuildEventContext,
                             UnexpandedProject = importElement.Project,
@@ -1954,7 +1954,7 @@ namespace Microsoft.Build.Evaluation
                             parenthesizedProjectLocation = "[" + _projectRootElement.FullPath + "]";
                         }
                         // TODO: Detect if the duplicate import came from an SDK attribute
-                        _evaluationLoggingContext.LogWarning(null, new BuildEventFileInfo(importLocationInProject), "DuplicateImport", importFileUnescaped, previouslyImportedAt.Location.LocationString, parenthesizedProjectLocation);
+                        _evaluationLoggingContext.LogWarning(null, new BuildEventFileInfo(importLocationInProject), "DuplicateImport", importFileUnescaped, previouslyImportedAt.InternalLocation.LocationString, parenthesizedProjectLocation);
                         duplicateImport = true;
                     }
 
@@ -2017,13 +2017,13 @@ namespace Microsoft.Build.Evaluation
                             if (_logProjectImportedEvents)
                             {
                                 ProjectImportedEventArgs eventArgs = new ProjectImportedEventArgs(
-                                    importElement.Location.Line,
-                                    importElement.Location.Column,
+                                    importElement.InternalLocation.Line,
+                                    importElement.InternalLocation.Column,
                                     ResourceUtilities.GetResourceString("ProjectImported"),
                                     importedProjectElement.FullPath,
                                     importElement.ContainingProject.FullPath,
-                                    importElement.Location.Line,
-                                    importElement.Location.Column)
+                                    importElement.InternalLocation.Line,
+                                    importElement.InternalLocation.Column)
                                 {
                                     BuildEventContext = _evaluationLoggingContext.BuildEventContext,
                                     ImportedProjectFile = importedProjectElement.FullPath,
@@ -2051,13 +2051,13 @@ namespace Microsoft.Build.Evaluation
                                 {
                                     // Log message for import skipped
                                     ProjectImportedEventArgs eventArgs = new ProjectImportedEventArgs(
-                                        importElement.Location.Line,
-                                        importElement.Location.Column,
+                                        importElement.InternalLocation.Line,
+                                        importElement.InternalLocation.Column,
                                         ResourceUtilities.GetResourceString("ProjectImportSkippedMissingFile"),
                                         importFileUnescaped,
                                         importElement.ContainingProject.FullPath,
-                                        importElement.Location.Line,
-                                        importElement.Location.Column)
+                                        importElement.InternalLocation.Line,
+                                        importElement.InternalLocation.Column)
                                     {
                                         BuildEventContext = _evaluationLoggingContext.BuildEventContext,
                                         UnexpandedProject = importElement.Project,
@@ -2102,13 +2102,13 @@ namespace Microsoft.Build.Evaluation
 
                                 // Log message for import skipped
                                 ProjectImportedEventArgs eventArgs = new ProjectImportedEventArgs(
-                                    importElement.Location.Line,
-                                    importElement.Location.Column,
+                                    importElement.InternalLocation.Line,
+                                    importElement.InternalLocation.Column,
                                     ResourceUtilities.GetResourceString(ignoreImportResource),
                                     importFileUnescaped,
                                     importElement.ContainingProject.FullPath,
-                                    importElement.Location.Line,
-                                    importElement.Location.Column)
+                                    importElement.InternalLocation.Line,
+                                    importElement.InternalLocation.Column)
                                 {
                                     BuildEventContext = _evaluationLoggingContext.BuildEventContext,
                                     UnexpandedProject = importElement.Project,

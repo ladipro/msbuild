@@ -15,6 +15,7 @@ using SdkResolverContextBase = Microsoft.Build.Framework.SdkResolverContext;
 using SdkResultBase = Microsoft.Build.Framework.SdkResult;
 using SdkResultFactoryBase = Microsoft.Build.Framework.SdkResultFactory;
 using SdkResultImpl = Microsoft.Build.BackEnd.SdkResolution.SdkResult;
+using Microsoft.Build.Shared;
 
 namespace Microsoft.Build.Engine.UnitTests.BackEnd
 {
@@ -296,7 +297,7 @@ namespace Microsoft.Build.Engine.UnitTests.BackEnd
                 _includeErrorResolver = includeErrorResolver;
             }
 
-            internal override IList<SdkResolver> LoadResolvers(LoggingContext loggingContext, ElementLocation location)
+            internal override IList<SdkResolver> LoadResolvers(LoggingContext loggingContext, IElementLocation location)
             {
                 List<SdkResolver> resolvers = new List<SdkResolver>
                 {

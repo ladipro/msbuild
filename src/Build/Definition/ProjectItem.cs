@@ -591,7 +591,7 @@ namespace Microsoft.Build.Evaluation
             {
                 ProjectMetadataElement metadatumXml = _xml.AddMetadata(name, unevaluatedValue);
 
-                string evaluatedValueEscaped = _project.ExpandMetadataValueBestEffortLeaveEscaped(this, unevaluatedValue, metadatumXml.Location);
+                string evaluatedValueEscaped = _project.ExpandMetadataValueBestEffortLeaveEscaped(this, unevaluatedValue, metadatumXml.InternalLocation);
 
                 metadatum = new ProjectMetadata(this, metadatumXml, evaluatedValueEscaped, null /* predecessor unknown */);
             }

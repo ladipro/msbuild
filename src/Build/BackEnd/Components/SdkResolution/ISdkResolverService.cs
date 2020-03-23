@@ -4,6 +4,7 @@
 using Microsoft.Build.BackEnd.Logging;
 using Microsoft.Build.Construction;
 using Microsoft.Build.Framework;
+using Microsoft.Build.Shared;
 using System;
 
 namespace Microsoft.Build.BackEnd.SdkResolution
@@ -40,6 +41,6 @@ namespace Microsoft.Build.BackEnd.SdkResolution
         /// <param name="projectPath">The full path to the project file that is resolving the SDK.</param>
         /// <param name="interactive">Indicates whether or not the resolver is allowed to be interactive.</param>
         /// <returns>An <see cref="SdkResult"/> containing information about the resolved SDK. If no resolver was able to resolve it, then <see cref="Framework.SdkResult.Success"/> == false. </returns>
-        SdkResult ResolveSdk(int submissionId, SdkReference sdk, LoggingContext loggingContext, ElementLocation sdkReferenceLocation, string solutionPath, string projectPath, bool interactive);
+        SdkResult ResolveSdk(int submissionId, SdkReference sdk, LoggingContext loggingContext, IElementLocation sdkReferenceLocation, string solutionPath, string projectPath, bool interactive);
     }
 }

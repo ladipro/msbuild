@@ -34,7 +34,7 @@ namespace Microsoft.Build.BackEnd.SdkResolution
             _cache.Clear();
         }
 
-        public override SdkResult ResolveSdk(int submissionId, SdkReference sdk, LoggingContext loggingContext, ElementLocation sdkReferenceLocation, string solutionPath, string projectPath, bool interactive)
+        public override SdkResult ResolveSdk(int submissionId, SdkReference sdk, LoggingContext loggingContext, IElementLocation sdkReferenceLocation, string solutionPath, string projectPath, bool interactive)
         {
             SdkResult result;
 

@@ -65,7 +65,7 @@ namespace Microsoft.Build.Construction
             {
                 if (value)
                 {
-                    ValidateValidMetadataAsAttributeName(Name, Parent?.ElementName ?? "null" , Parent?.Location);
+                    ValidateValidMetadataAsAttributeName(Name, Parent?.ElementName ?? "null" , Parent?.InternalLocation);
                 }
                 base.ExpressedAsAttribute = value;
             }
@@ -129,7 +129,7 @@ namespace Microsoft.Build.Construction
 
             if (ExpressedAsAttribute)
             {
-                ValidateValidMetadataAsAttributeName(newName, Parent.ElementName, Parent.Location);
+                ValidateValidMetadataAsAttributeName(newName, Parent.ElementName, Parent.InternalLocation);
             }
 
             // Because the element was created from our special XmlDocument, we know it's

@@ -366,7 +366,7 @@ namespace Microsoft.Build.Evaluation
 
                     _xml.Value = value;
 
-                    _evaluatedValueEscaped = _project.ExpandPropertyValueBestEffortLeaveEscaped(value, _xml.Location);
+                    _evaluatedValueEscaped = _project.ExpandPropertyValueBestEffortLeaveEscaped(value, _xml.InternalLocation);
                 }
             }
 

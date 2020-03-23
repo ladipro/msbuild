@@ -175,7 +175,7 @@ namespace Microsoft.Build.Evaluation
 
             _metadata = _metadata ?? new PropertyDictionary<ProjectMetadata>();
 
-            string evaluatedValueEscaped = _project.ExpandMetadataValueBestEffortLeaveEscaped(this, unevaluatedValue, metadatumXml.Location);
+            string evaluatedValueEscaped = _project.ExpandMetadataValueBestEffortLeaveEscaped(this, unevaluatedValue, metadatumXml.InternalLocation);
 
             metadatum = new ProjectMetadata(this, metadatumXml, evaluatedValueEscaped, null /* predecessor unknown */);
 

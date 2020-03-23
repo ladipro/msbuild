@@ -67,7 +67,7 @@ namespace Microsoft.Build.Evaluation
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IDisposable TrackElement(ProjectElement element)
         {
-            return _shouldTrackElements ? new EvaluationFrame(this, CurrentLocation.WithFileLineAndElement(element.Location.File, element.Location.Line, element)) : null;
+            return _shouldTrackElements ? new EvaluationFrame(this, CurrentLocation.WithFileLineAndElement(element.InternalLocation.File, element.InternalLocation.Line, element)) : null;
         }
 
         /// <nodoc/>

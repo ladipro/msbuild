@@ -556,7 +556,7 @@ namespace Microsoft.Build.Evaluation
                     var valueWithPropertiesExpanded = _expander.ExpandIntoStringLeaveEscaped(
                         metadatumElement.Value,
                         expanderOptions,
-                        metadatumElement.Location);
+                        metadatumElement.InternalLocation);
 
                     var conditionWithPropertiesExpanded = _expander.ExpandIntoStringLeaveEscaped(
                         metadatumElement.Condition,

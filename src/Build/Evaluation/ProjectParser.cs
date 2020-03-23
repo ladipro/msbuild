@@ -597,7 +597,7 @@ namespace Microsoft.Build.Construction
                     case XMakeElements.propertyGroup:
                         if (onError != null)
                         {
-                            ProjectErrorUtilities.ThrowInvalidProject(onError.Location, "NodeMustBeLastUnderElement", XMakeElements.onError, XMakeElements.target, childElement.Name);
+                            ProjectErrorUtilities.ThrowInvalidProject(onError.InternalLocation, "NodeMustBeLastUnderElement", XMakeElements.onError, XMakeElements.target, childElement.Name);
                         }
 
                         child = ParseProjectPropertyGroupElement(childElement, target);
@@ -606,7 +606,7 @@ namespace Microsoft.Build.Construction
                     case XMakeElements.itemGroup:
                         if (onError != null)
                         {
-                            ProjectErrorUtilities.ThrowInvalidProject(onError.Location, "NodeMustBeLastUnderElement", XMakeElements.onError, XMakeElements.target, childElement.Name);
+                            ProjectErrorUtilities.ThrowInvalidProject(onError.InternalLocation, "NodeMustBeLastUnderElement", XMakeElements.onError, XMakeElements.target, childElement.Name);
                         }
 
                         child = ParseProjectItemGroupElement(childElement, target);
@@ -629,7 +629,7 @@ namespace Microsoft.Build.Construction
                     default:
                         if (onError != null)
                         {
-                            ProjectErrorUtilities.ThrowInvalidProject(onError.Location, "NodeMustBeLastUnderElement", XMakeElements.onError, XMakeElements.target, childElement.Name);
+                            ProjectErrorUtilities.ThrowInvalidProject(onError.InternalLocation, "NodeMustBeLastUnderElement", XMakeElements.onError, XMakeElements.target, childElement.Name);
                         }
 
                         child = ParseProjectTaskElement(childElement, target);

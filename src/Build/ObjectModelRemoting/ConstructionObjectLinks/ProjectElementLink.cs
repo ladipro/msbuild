@@ -79,7 +79,7 @@ namespace Microsoft.Build.ObjectModelRemoting
         public abstract ProjectElement NextSibling { get; }
 
         /// <summary>
-        /// Access to remote <see cref="ProjectElement.Location"/>.
+        /// Access to remote <see cref="ProjectElement.InternalLocation"/>.
         /// </summary>
         public abstract ElementLocation Location { get; }
 

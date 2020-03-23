@@ -11,12 +11,19 @@ namespace Microsoft.Build.Construction
     /// <summary>
     /// Derivation of XmlAttribute to implement IXmlLineInfo
     /// </summary>
-    internal class XmlAttributeWithLocation : XmlAttribute, IXmlLineInfo
+    internal class XmlAttributeWithLocation : XmlAttribute, IXmlLineInfo, IElementLocation
     {
+        private static int _totalCreated = 0;
+        private static int _totalQueried = 0;
+
         /// <summary>
         /// Line, column, file information
         /// </summary>
         private ElementLocation _elementLocation;
+        private bool _elementLocationQueried = false;
+
+        private ushort _locationLine;
+        private ushort _locationColumn;
 
         /// <summary>
         /// Constructor without location information
@@ -32,9 +39,18 @@ namespace Microsoft.Build.Construction
         public XmlAttributeWithLocation(string prefix, string localName, string namespaceURI, XmlDocument document, int lineNumber, int columnNumber)
             : base(prefix, localName, namespaceURI, document)
         {
-            XmlDocumentWithLocation documentWithLocation = (XmlDocumentWithLocation)document;
+            _totalCreated++;
 
-            _elementLocation = ElementLocation.Create(documentWithLocation.FullPath, lineNumber, columnNumber);
+            if (lineNumber <= 65535 && columnNumber <= 65535)
+            {
+                this._locationLine = Convert.ToUInt16(lineNumber);
+                this._locationColumn = Convert.ToUInt16(columnNumber);
+            }
+            else
+            {
+                XmlDocumentWithLocation documentWithLocation = (XmlDocumentWithLocation)document;
+                _elementLocation = ElementLocation.Create(documentWithLocation.FullPath, lineNumber, columnNumber);
+            }
         }
 
         /// <summary>
@@ -59,6 +75,14 @@ namespace Microsoft.Build.Construction
             { return Location.Column; }
         }
 
+        internal IElementLocation Location
+        {
+            get
+            {
+                return this;
+            }
+        }
+
         /// <summary>
         /// Provides an ElementLocation for this attribute.
         /// </summary>
@@ -67,17 +91,22 @@ namespace Microsoft.Build.Construction
         /// even if it wasn't loaded from disk, or has been edited since. That's because we set that
         /// path on our XmlDocumentWithLocation wrapper class.
         /// </remarks>
-        internal ElementLocation Location
+        internal ElementLocation TrueLocation
         {
             get
             {
-                // Caching the element location object saves significant memory
-                XmlDocumentWithLocation ownerDocumentWithLocation = (XmlDocumentWithLocation)OwnerDocument;
-                if (!String.Equals(_elementLocation.File, ownerDocumentWithLocation.FullPath, StringComparison.OrdinalIgnoreCase))
+                if (_elementLocation == null)
                 {
-                    _elementLocation = ElementLocation.Create(ownerDocumentWithLocation.FullPath, _elementLocation.Line, _elementLocation.Column);
-                }
+                    if (!_elementLocationQueried)
+                    {
+                        _totalQueried++;
+                        //Console.WriteLine("### ATTR Total queried/created: {0}/{1}", _totalQueried, _totalCreated);
+                    }
+                    _elementLocationQueried = true;
 
+                    XmlDocumentWithLocation ownerDocumentWithLocation = (XmlDocumentWithLocation)OwnerDocument;
+                    _elementLocation = ElementLocation.Create(ownerDocumentWithLocation.FullPath, _locationLine, _locationColumn);
+                }
                 return _elementLocation;
             }
         }
@@ -90,5 +119,11 @@ namespace Microsoft.Build.Construction
         {
             return Location.Line != 0;
         }
+
+        string IElementLocation.File => TrueLocation.File;
+        int IElementLocation.Line => TrueLocation.Line;
+        int IElementLocation.Column => TrueLocation.Column;
+        string IElementLocation.LocationString => TrueLocation.LocationString;
+        public void Translate(Microsoft.Build.BackEnd.ITranslator translator) => ((Microsoft.Build.BackEnd.ITranslatable)TrueLocation).Translate(translator);
     }
 }

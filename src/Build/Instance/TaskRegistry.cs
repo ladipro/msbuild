@@ -361,7 +361,7 @@ namespace Microsoft.Build.Execution
             catch (ArgumentException ex)
             {
                 // Invalid chars in AssemblyFile path
-                ProjectErrorUtilities.ThrowInvalidProject(projectUsingTaskXml.Location, "InvalidAttributeValueWithException", assemblyFile, XMakeAttributes.assemblyFile, XMakeElements.usingTask, ex.Message);
+                ProjectErrorUtilities.ThrowInvalidProject(projectUsingTaskXml.InternalLocation, "InvalidAttributeValueWithException", assemblyFile, XMakeAttributes.assemblyFile, XMakeElements.usingTask, ex.Message);
             }
 
             RegisteredTaskRecord.ParameterGroupAndTaskElementRecord parameterGroupAndTaskElementRecord = null;
@@ -1590,7 +1590,7 @@ namespace Microsoft.Build.Execution
                     // If we need to evaluate then expand and evaluate the next inside of the body
                     if (evaluate)
                     {
-                        _inlineTaskXmlBody = expander.ExpandIntoStringLeaveEscaped(taskElement.TaskBody, expanderOptions, taskElement.Location);
+                        _inlineTaskXmlBody = expander.ExpandIntoStringLeaveEscaped(taskElement.TaskBody, expanderOptions, taskElement.InternalLocation);
                     }
                     else
                     {
@@ -1670,7 +1670,7 @@ namespace Microsoft.Build.Execution
                         {
                             ProjectErrorUtilities.ThrowInvalidProject
                             (
-                                parameter.Location,
+                                parameter.InternalLocation,
                                 "UnsupportedTaskParameterTypeError",
                                 paramType.FullName,
                                 parameter.ParameterType,
