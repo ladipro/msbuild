@@ -288,7 +288,8 @@ namespace Microsoft.Build.BackEnd
                 child.RemoveLocation,
                 child.Remove);
 
-            return items.Where(item => itemSpec.MatchesItemOnMetadata(item, matchOnMetadata, options)).ToList();
+            MatchOnMetadataState state = new MatchOnMetadataState(matchOnMetadata, options);
+            return items.Where(item => itemSpec.MatchesItemOnMetadata(item, state)).ToList();
         }
 
         /// <summary>

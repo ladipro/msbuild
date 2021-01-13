@@ -3,8 +3,10 @@
 
 using Microsoft.Build.Construction;
 using Microsoft.Build.Shared;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 
 namespace Microsoft.Build.Evaluation
 {
@@ -12,14 +14,12 @@ namespace Microsoft.Build.Evaluation
     {
         class RemoveOperation : LazyItemOperation
         {
-            readonly ImmutableList<string> _matchOnMetadata;
-            readonly MatchOnMetadataOptions _matchOnMetadataOptions;
+            readonly MatchOnMetadataState _matchOnMetadataState;
 
             public RemoveOperation(RemoveOperationBuilder builder, LazyItemEvaluator<P, I, M, D> lazyEvaluator)
                 : base(builder, lazyEvaluator)
             {
-                _matchOnMetadata = builder.MatchOnMetadata.ToImmutable();
-                _matchOnMetadataOptions = builder.MatchOnMetadataOptions;
+                _matchOnMetadataState = new MatchOnMetadataState(builder.MatchOnMetadata.ToImmutable(), builder.MatchOnMetadataOptions);
             }
 
             /// <summary>
@@ -31,14 +31,14 @@ namespace Microsoft.Build.Evaluation
             /// </remarks>
             protected override void ApplyImpl(ImmutableList<ItemData>.Builder listBuilder, ImmutableHashSet<string> globsToIgnore)
             {
-                var matchOnMetadataValid = !_matchOnMetadata.IsEmpty && _itemSpec.Fragments.Count == 1
+                var matchOnMetadataValid = !_matchOnMetadataState.IsEmpty && _itemSpec.Fragments.Count == 1
                     && _itemSpec.Fragments.First() is ItemSpec<ProjectProperty, ProjectItem>.ItemExpressionFragment;
                 ProjectFileErrorUtilities.VerifyThrowInvalidProjectFile(
-                    _matchOnMetadata.IsEmpty || (matchOnMetadataValid && _matchOnMetadata.Count == 1),
+                    _matchOnMetadataState.IsEmpty || (matchOnMetadataValid && _matchOnMetadataState.Count == 1),
                     new BuildEventFileInfo(string.Empty),
                     "OM_MatchOnMetadataIsRestrictedToOnlyOneReferencedItem");
 
-                if (_matchOnMetadata.IsEmpty && ItemspecContainsASingleBareItemReference(_itemSpec, _itemElement.ItemType) && _conditionResult)
+                if (_matchOnMetadataState.IsEmpty && ItemspecContainsASingleBareItemReference(_itemSpec, _itemElement.ItemType) && _conditionResult)
                 {
                     // Perf optimization: If the Remove operation references itself (e.g. <I Remove="@(I)"/>)
                     // then all items are removed and matching is not necessary
@@ -55,7 +55,7 @@ namespace Microsoft.Build.Evaluation
                 var items = ImmutableHashSet.CreateBuilder<I>();
                 foreach (ItemData item in listBuilder)
                 {
-                    if (_matchOnMetadata.IsEmpty ? _itemSpec.MatchesItem(item.Item) : _itemSpec.MatchesItemOnMetadata(item.Item, _matchOnMetadata, _matchOnMetadataOptions))
+                    if (_matchOnMetadataState.IsEmpty ? _itemSpec.MatchesItem(item.Item) : _itemSpec.MatchesItemOnMetadata(item.Item, _matchOnMetadataState))
                         items.Add(item.Item);
                 }
 
@@ -110,5 +110,34 @@ namespace Microsoft.Build.Evaluation
 
     public static class MatchOnMetadataConstants {
         public const MatchOnMetadataOptions MatchOnMetadataOptionsDefaultValue = MatchOnMetadataOptions.CaseSensitive;
+    }
+
+    internal sealed class MatchOnMetadataState
+    {
+        public readonly MatchOnMetadataOptions Options;
+        public readonly IEnumerable<string> Metadata;
+
+        // TODO: Add cache
+
+        public bool IsEmpty => Count == 0;
+
+        public int Count
+        {
+            get
+            {
+                if (Metadata is ImmutableList<string> list)
+                {
+                    return list.Count;
+                }
+                return Metadata.Count();
+            }
+        }
+
+        public MatchOnMetadataState(IEnumerable<string> metadata, MatchOnMetadataOptions options)
+        {
+            Metadata = metadata;
+            Options = options;
+
+        }
     }
 }

@@ -85,10 +85,10 @@ namespace Microsoft.Build.Evaluation
                 return ReferencedItems.Any(v => v.ItemAsValueFragment.IsMatch(itemToMatch));
             }
 
-            public override bool IsMatchOnMetadata(IItem item, IEnumerable<string> metadata, MatchOnMetadataOptions options)
+            public override bool IsMatchOnMetadata(IItem item, MatchOnMetadataState state)
             {
                 return ReferencedItems.Any(referencedItem =>
-                        metadata.All(m => !item.GetMetadataValue(m).Equals(string.Empty) && MetadataComparer(options, item.GetMetadataValue(m), referencedItem.Item.GetMetadataValue(m))));
+                        state.Metadata.All(m => !item.GetMetadataValue(m).Equals(string.Empty) && MetadataComparer(state.Options, item.GetMetadataValue(m), referencedItem.Item.GetMetadataValue(m))));
             }
 
             private bool MetadataComparer(MatchOnMetadataOptions options, string itemMetadata, string referencedItemMetadata)
@@ -311,17 +311,16 @@ namespace Microsoft.Build.Evaluation
         }
 
         /// <summary>
-        ///     Return true if any of the given <paramref name="metadata" /> matches the metadata on <paramref name="item" />
+        ///     Return true if any of the given metadata matches the metadata on <paramref name="item" />
         /// </summary>
         /// <param name="item">The item to attempt to find a match for based on matching metadata</param>
-        /// <param name="metadata">Names of metadata to look for matches for</param>
-        /// <param name="options">metadata option matching</param>
+        /// <param name="state">The metadata to look for and other context</param>
         /// <returns></returns>
-        public bool MatchesItemOnMetadata(IItem item, IEnumerable<string> metadata, MatchOnMetadataOptions options)
+        public bool MatchesItemOnMetadata(IItem item, MatchOnMetadataState state)
         {
             foreach (var fragment in Fragments)
             {
-                if (fragment.IsMatchOnMetadata(item, metadata, options))
+                if (fragment.IsMatchOnMetadata(item, state))
                 {
                     return true;
                 }
@@ -457,9 +456,9 @@ namespace Microsoft.Build.Evaluation
         }
 
         /// <summary>
-        /// Returns true if <paramref name="itemToMatch" /> matches any ReferencedItems based on <paramref name="metadata" /> and <paramref name="options" />.
+        /// Returns true if <paramref name="itemToMatch" /> matches any ReferencedItems based on <paramref name="state" />.
         /// </summary>
-        public virtual bool IsMatchOnMetadata(IItem itemToMatch, IEnumerable<string> metadata, MatchOnMetadataOptions options)
+        public virtual bool IsMatchOnMetadata(IItem itemToMatch, MatchOnMetadataState state)
         {
             return false;
         }
