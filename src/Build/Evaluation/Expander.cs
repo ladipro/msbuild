@@ -25,6 +25,7 @@ using TaskItem = Microsoft.Build.Execution.ProjectItemInstance.TaskItem;
 using TaskItemFactory = Microsoft.Build.Execution.ProjectItemInstance.TaskItem.TaskItemFactory;
 
 using Microsoft.NET.StringTools;
+using System.Diagnostics;
 
 namespace Microsoft.Build.Evaluation
 {
@@ -488,19 +489,6 @@ namespace Microsoft.Build.Evaluation
         /// essentially, pushes and pops on a stack of parentheses to do this.
         /// Takes the expression and the index to start at.
         /// Returns the index of the matching parenthesis, or -1 if it was not found.
-        /// </summary>
-        private static int ScanForClosingParenthesis(string expression, int index)
-        {
-            bool potentialPropertyFunction;
-            bool potentialRegistryFunction;
-            return ScanForClosingParenthesis(expression, index, out potentialPropertyFunction, out potentialRegistryFunction);
-        }
-
-        /// <summary>
-        /// Scan for the closing bracket that matches the one we've already skipped;
-        /// essentially, pushes and pops on a stack of parentheses to do this.
-        /// Takes the expression and the index to start at.
-        /// Returns the index of the matching parenthesis, or -1 if it was not found.
         /// Also returns flags to indicate if a propertyfunction or registry property is likely
         /// to be found in the expression.
         /// </summary>
@@ -512,16 +500,15 @@ namespace Microsoft.Build.Evaluation
             potentialPropertyFunction = false;
             potentialRegistryFunction = false;
 
-            unsafe
+            // Scan for our closing ')'
+            while (index < length && nestLevel > 0)
             {
-                fixed (char* pchar = expression)
+                char character = expression[index];
+                switch (character)
                 {
-                    // Scan for our closing ')'
-                    while (index < length && nestLevel > 0)
-                    {
-                        char character = pchar[index];
-
-                        if (character == '\'' || character == '`' || character == '"')
+                    case '\'':
+                    case '`':
+                    case '"':
                         {
                             index++;
                             index = ScanForClosingQuote(character, expression, index);
@@ -530,27 +517,33 @@ namespace Microsoft.Build.Evaluation
                             {
                                 return -1;
                             }
+                            break;
                         }
-                        else if (character == '(')
+                    case '(':
                         {
                             nestLevel++;
+                            break;
                         }
-                        else if (character == ')')
+                    case ')':
                         {
                             nestLevel--;
+                            break;
                         }
-                        else if (character == '.' || character == '[' || character == '$')
+                    case '.':
+                    case '[':
+                    case '$':
                         {
                             potentialPropertyFunction = true;
+                            break;
                         }
-                        else if (character == ':')
+                    case ':':
                         {
                             potentialRegistryFunction = true;
+                            break;
                         }
-
-                        index++;
-                    }
                 }
+
+                index++;
             }
 
             // We will have parsed past the ')', so step back one character
@@ -564,24 +557,8 @@ namespace Microsoft.Build.Evaluation
         /// </summary>
         private static int ScanForClosingQuote(char quoteChar, string expression, int index)
         {
-            unsafe
-            {
-                fixed (char* pchar = expression)
-                {
-                    // Scan for our closing quoteChar
-                    while (index < expression.Length)
-                    {
-                        if (pchar[index] == quoteChar)
-                        {
-                            return index;
-                        }
-
-                        index++;
-                    }
-                }
-            }
-
-            return -1;
+            // Scan for our closing quoteChar
+            return expression.IndexOf(quoteChar, index);
         }
 
         /// <summary>
@@ -666,7 +643,7 @@ namespace Microsoft.Build.Evaluation
                     n += 2; // skip over the opening '$('
 
                     // Scan for the matching closing bracket, skipping any nested ones
-                    n = ScanForClosingParenthesis(argumentsString, n);
+                    n = ScanForClosingParenthesis(argumentsString, n, out _, out _);
 
                     if (n == -1)
                     {
@@ -953,23 +930,50 @@ namespace Microsoft.Build.Evaluation
                             fileSystem));
             }
 
-            /// <summary>
-            /// This method takes a string which may contain any number of
-            /// "$(propertyname)" tags in it.  It replaces all those tags with
-            /// the actual property values, and returns a new string.  For example,
-            ///
-            ///     string processedString =
-            ///         propertyBag.ExpandProperties("Value of NoLogo is $(NoLogo).");
-            ///
-            /// This code might produce:
-            ///
-            ///     processedString = "Value of NoLogo is true."
-            ///
-            /// If the sourceString contains an embedded property which doesn't
-            /// have a value, then we replace that tag with an empty string.
-            ///
-            /// This method leaves the result typed and escaped.  Callers may need to convert to string, and unescape on their own as appropriate.
-            /// </summary>
+            static int _noProp = 0;
+            static int _onePropOnly = 0;
+            static int _onePropStart = 0;
+            static int _onePropEnd = 0;
+            static int _onePropMiddle = 0;
+            static int _multiProp = 0;
+
+            static void DoPropExpansionStats(string expression)
+            {
+                int propertyStartIndex = s_invariantCompareInfo.IndexOf(expression, "$(", CompareOptions.Ordinal);
+                if (propertyStartIndex == -1)
+                {
+                    _noProp++;
+                }
+                else
+                {
+                    int propertyEndIndex = ScanForClosingParenthesis(expression, propertyStartIndex + 2, out _, out _);
+                    if (propertyStartIndex == 0 && propertyEndIndex == expression.Length - 1)
+                    {
+                        _onePropOnly++;
+                    }
+                    else if (s_invariantCompareInfo.IndexOf(expression, "$(", propertyEndIndex, CompareOptions.Ordinal) >= 0)
+                    {
+                        _multiProp++;
+                    }
+                    else if (propertyStartIndex == 0)
+                    {
+                        _onePropStart++;
+                    } else if (propertyEndIndex == expression.Length - 1)
+                    {
+                        _onePropEnd++;
+                    }
+                    else
+                    {
+                        _onePropMiddle++;
+                    }
+                }
+
+                Console.WriteLine("# No: {0}, OneOnly: {1}, OneStart: {2}, OneEnd: {3}, OneMiddle: {4}, Multi: {5}",
+                    _noProp, _onePropOnly, _onePropStart, _onePropEnd, _onePropMiddle, _multiProp);
+            }
+
+            static Stopwatch _sw = new Stopwatch();
+
             internal static object ExpandPropertiesLeaveTypedAndEscaped(
                 string expression,
                 IPropertyProvider<T> properties,
@@ -978,6 +982,43 @@ namespace Microsoft.Build.Evaluation
                 UsedUninitializedProperties usedUninitializedProperties,
                 IFileSystem fileSystem)
             {
+                _sw.Start();
+                object retVal = null;
+                for (int i = 0; i < 100; i++)
+                {
+                    retVal = ExpandPropertiesLeaveTypedAndEscaped_Impl(expression, properties, options, elementLocation, usedUninitializedProperties, fileSystem);
+                }
+                _sw.Stop();
+                Console.WriteLine("###: " + _sw.ElapsedMilliseconds);
+                return retVal;
+            }
+
+                /// <summary>
+                /// This method takes a string which may contain any number of
+                /// "$(propertyname)" tags in it.  It replaces all those tags with
+                /// the actual property values, and returns a new string.  For example,
+                ///
+                ///     string processedString =
+                ///         propertyBag.ExpandProperties("Value of NoLogo is $(NoLogo).");
+                ///
+                /// This code might produce:
+                ///
+                ///     processedString = "Value of NoLogo is true."
+                ///
+                /// If the sourceString contains an embedded property which doesn't
+                /// have a value, then we replace that tag with an empty string.
+                ///
+                /// This method leaves the result typed and escaped.  Callers may need to convert to string, and unescape on their own as appropriate.
+                /// </summary>
+                internal static object ExpandPropertiesLeaveTypedAndEscaped_Impl(
+                    string expression,
+                    IPropertyProvider<T> properties,
+                    ExpanderOptions options,
+                    IElementLocation elementLocation,
+                    UsedUninitializedProperties usedUninitializedProperties,
+                    IFileSystem fileSystem)
+                {
+                //DoPropExpansionStats(expression);
                 if (((options & ExpanderOptions.ExpandProperties) == 0) || String.IsNullOrEmpty(expression))
                 {
                     return expression;
@@ -1013,34 +1054,23 @@ namespace Microsoft.Build.Evaluation
                 {
                     if (lastResult != null)
                     {
-                        if (results == null)
-                        {
-                            results = new List<object>(4);
-                        }
-
+                        results ??= new List<object>(4);
                         results.Add(lastResult);
                     }
-
 
                     // Append the result with the portion of the expression up to
                     // (but not including) the "$(", and advance the sourceIndex pointer.
                     if (propertyStartIndex - sourceIndex > 0)
                     {
-                        if (results == null)
-                        {
-                            results = new List<object>(4);
-                        }
-
+                        results ??= new List<object>(4);
                         results.Add(expression.Substring(sourceIndex, propertyStartIndex - sourceIndex));
                     }
 
-                    bool tryExtractPropertyFunction;
-                    bool tryExtractRegistryFunction;
                     // Following the "$(" we need to locate the matching ')'
                     // Scan for the matching closing bracket, skipping any nested ones
                     // This is a very complete, fast validation of parenthesis matching including for nested
                     // function calls.
-                    propertyEndIndex = ScanForClosingParenthesis(expression, propertyStartIndex + 2, out tryExtractPropertyFunction, out tryExtractRegistryFunction);
+                    propertyEndIndex = ScanForClosingParenthesis(expression, propertyStartIndex + 2, out bool tryExtractPropertyFunction, out bool tryExtractRegistryFunction);
 
                     if (propertyEndIndex == -1)
                     {
@@ -1306,76 +1336,72 @@ namespace Microsoft.Build.Evaluation
             /// </summary>
             internal static string ConvertToString(object valueToConvert)
             {
-                if (valueToConvert != null)
+                if (valueToConvert == null)
                 {
-                    Type valueType = valueToConvert.GetType();
-                    string convertedString;
+                    return String.Empty;
+                }
+                // If the value is a string, then there is nothing to do
+                if (valueToConvert is string stringValue)
+                {
+                    return stringValue;
+                }
 
-                    // If the type is a string, then there is nothing to do
-                    if (valueType == typeof(string))
+                string convertedString;
+                if (valueToConvert is IDictionary dictionary)
+                {
+                    // If the return type is an IDictionary, then we convert this to
+                    // a semi-colon delimited set of A=B pairs.
+                    // Key and Value are converted to string and escaped
+                    if (dictionary.Count > 0)
                     {
-                        convertedString = (string)valueToConvert;
-                    }
-                    else if (valueToConvert is IDictionary dictionary)
-                    {
-                        // If the return type is an IDictionary, then we convert this to
-                        // a semi-colon delimited set of A=B pairs.
-                        // Key and Value are converted to string and escaped
-                        if (dictionary.Count > 0)
-                        {
-                            using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
-
-                            foreach (DictionaryEntry entry in dictionary)
-                            {
-                                if (builder.Length > 0)
-                                {
-                                    builder.Append(";");
-                                }
-
-                                // convert and escape each key and value in the dictionary entry
-                                builder.Append(EscapingUtilities.Escape(ConvertToString(entry.Key)));
-                                builder.Append("=");
-                                builder.Append(EscapingUtilities.Escape(ConvertToString(entry.Value)));
-                            }
-
-                            convertedString = builder.ToString();
-                        }
-                        else
-                        {
-                            convertedString = string.Empty;
-                        }
-                    }
-                    else if (valueToConvert is IEnumerable enumerable)
-                    {
-                        // If the return is enumerable, then we'll convert to semi-colon delimited elements
-                        // each of which must be converted, so we'll recurse for each element
                         using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
 
-                        foreach (object element in enumerable)
+                        foreach (DictionaryEntry entry in dictionary)
                         {
                             if (builder.Length > 0)
                             {
                                 builder.Append(";");
                             }
 
-                            // we need to convert and escape each element of the array
-                            builder.Append(EscapingUtilities.Escape(ConvertToString(element)));
+                            // convert and escape each key and value in the dictionary entry
+                            builder.Append(EscapingUtilities.Escape(ConvertToString(entry.Key)));
+                            builder.Append("=");
+                            builder.Append(EscapingUtilities.Escape(ConvertToString(entry.Value)));
                         }
 
                         convertedString = builder.ToString();
                     }
                     else
                     {
-                        // The fall back is always to just convert to a string directly.
-                        convertedString = valueToConvert.ToString();
+                        convertedString = string.Empty;
+                    }
+                }
+                else if (valueToConvert is IEnumerable enumerable)
+                {
+                    // If the return is enumerable, then we'll convert to semi-colon delimited elements
+                    // each of which must be converted, so we'll recurse for each element
+                    using SpanBasedStringBuilder builder = Strings.GetSpanBasedStringBuilder();
+
+                    foreach (object element in enumerable)
+                    {
+                        if (builder.Length > 0)
+                        {
+                            builder.Append(";");
+                        }
+
+                        // we need to convert and escape each element of the array
+                        builder.Append(EscapingUtilities.Escape(ConvertToString(element)));
                     }
 
-                    return convertedString;
+                    convertedString = builder.ToString();
                 }
                 else
                 {
-                    return String.Empty;
+                    // The fall back is always to just convert to a string directly.
+                    convertedString = valueToConvert.ToString();
                 }
+
+                return convertedString;
             }
 
             /// <summary>
@@ -4736,7 +4762,7 @@ namespace Microsoft.Build.Evaluation
                     argumentStartIndex++;
 
                     // Scan for the matching closing bracket, skipping any nested ones
-                    int argumentsEndIndex = ScanForClosingParenthesis(expressionFunction, argumentStartIndex);
+                    int argumentsEndIndex = ScanForClosingParenthesis(expressionFunction, argumentStartIndex, out _, out _);
 
                     if (argumentsEndIndex == -1)
                     {

@@ -3678,6 +3678,20 @@ namespace Microsoft.Build.UnitTests.Evaluation
             result.ShouldBe(metadatumValue);
         }
 
+        [Theory]
+        [InlineData("hello")]
+        [InlineData("$(hello)")]
+        [InlineData("$(hello)world")]
+        [InlineData("hello$(world)")]
+        [InlineData("hello$(world)record")]
+        [InlineData("$(hello)record$(world)")]
+        public void LadiTest(string expression)
+        {
+            PropertyDictionary<ProjectPropertyInstance> pg = new PropertyDictionary<ProjectPropertyInstance>();
+            Expander<ProjectPropertyInstance, ProjectItemInstance> expander = new Expander<ProjectPropertyInstance, ProjectItemInstance>(pg, FileSystems.Default);
+            object result = expander.ExpandPropertiesLeaveTypedAndEscaped(expression, ExpanderOptions.ExpandProperties, MockElementLocation.Instance);
+        }
+
         [Fact]
         public void PropertyFunctionHashCodeSameOnlyIfStringSame()
         {
