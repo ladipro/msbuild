@@ -1041,8 +1041,7 @@ namespace Microsoft.Build.Evaluation
                 // so that we can either maintain the object's type in the event
                 // that we have a single component, or convert to a string
                 // if concatenation is required.
-                List<object> results = null;
-                object lastResult = null;
+                List<object> results = new List<object>();
 
                 // The sourceIndex is the zero-based index into the expression,
                 // where we've essentially read up to and copied into the target string.
@@ -1052,17 +1051,10 @@ namespace Microsoft.Build.Evaluation
                 // any more.
                 while (propertyStartIndex != -1)
                 {
-                    if (lastResult != null)
-                    {
-                        results ??= new List<object>(4);
-                        results.Add(lastResult);
-                    }
-
                     // Append the result with the portion of the expression up to
                     // (but not including) the "$(", and advance the sourceIndex pointer.
                     if (propertyStartIndex - sourceIndex > 0)
                     {
-                        results ??= new List<object>(4);
                         results.Add(expression.Substring(sourceIndex, propertyStartIndex - sourceIndex));
                     }
 
@@ -1078,7 +1070,7 @@ namespace Microsoft.Build.Evaluation
                         // isn't really a well-formed property tag.  Just literally
                         // copy the remainder of the expression (starting with the "$("
                         // that we found) into the result, and quit.
-                        lastResult = expression.Substring(propertyStartIndex, expression.Length - propertyStartIndex);
+                        results.Add(expression.Substring(propertyStartIndex, expression.Length - propertyStartIndex));
                         sourceIndex = expression.Length;
                     }
                     else
@@ -1155,7 +1147,7 @@ namespace Microsoft.Build.Evaluation
                         // Record our result, and advance
                         // our sourceIndex pointer to the character just after the closing
                         // parenthesis.
-                        lastResult = propertyValue;
+                        results.Add(propertyValue);
                         sourceIndex = propertyEndIndex + 1;
                     }
 
@@ -1163,10 +1155,10 @@ namespace Microsoft.Build.Evaluation
                 }
 
                 // If we have only a single result, then just return it
-                if (results == null && expression.Length == sourceIndex)
+                if (results.Count == 1 && expression.Length == sourceIndex)
                 {
-                    var resultString = lastResult as string;
-                    return resultString != null ? FileUtilities.MaybeAdjustFilePath(resultString) : lastResult;
+                    var resultString = results[0] as string;
+                    return resultString != null ? FileUtilities.MaybeAdjustFilePath(resultString) : results[0];
                 }
                 else
                 {
@@ -1184,20 +1176,10 @@ namespace Microsoft.Build.Evaluation
                     // This method is called very often - of the order of 3,000 times per project.
                     using SpanBasedStringBuilder result = Strings.GetSpanBasedStringBuilder();
 
-                    // Append our collected results
-                    if (results != null)
+                    // Create a combined result string from the result components that we've gathered
+                    foreach (object component in results)
                     {
-                        // Create a combined result string from the result components that we've gathered
-                        foreach (object component in results)
-                        {
-                            result.Append(FileUtilities.MaybeAdjustFilePath(component.ToString()));
-                        }
-                    }
-
-                    // Append the last result we collected (it wasn't added to the list)
-                    if (lastResult != null)
-                    {
-                        result.Append(FileUtilities.MaybeAdjustFilePath(lastResult.ToString()));
+                        result.Append(FileUtilities.MaybeAdjustFilePath(component.ToString()));
                     }
 
                     // And if we couldn't find anymore property tags in the expression,
