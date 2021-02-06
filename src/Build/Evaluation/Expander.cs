@@ -993,6 +993,90 @@ namespace Microsoft.Build.Evaluation
                 return retVal;
             }
 
+            private struct SpanBasedExpanderHelper : IDisposable
+            {
+                private SpanBasedStringBuilder _builder;
+                private object _firstObject;
+                private ReadOnlyMemory<char> _firstSpan;
+
+                public void Add(object obj)
+                {
+                    FlushFirstValueIfNeeded();
+                    if (_builder != null)
+                    {
+                        _builder.Append(FileUtilities.MaybeAdjustFilePath(obj.ToString()));
+                    }
+                    else
+                    {
+                        _firstObject = obj;
+                    }
+                }
+
+                public void Add(ReadOnlyMemory<char> span)
+                {
+                    FlushFirstValueIfNeeded();
+                    if (_builder != null)
+                    {
+                        _builder.Append(FileUtilities.MaybeAdjustFilePath(span));
+                    }
+                    else
+                    {
+                        _firstSpan = span;
+                    }
+                }
+
+                private void FlushFirstValueIfNeeded()
+                {
+                    if (_firstObject != null)
+                    {
+                        _builder = Strings.GetSpanBasedStringBuilder();
+                        _builder.Append(FileUtilities.MaybeAdjustFilePath(_firstObject.ToString()));
+                        _firstObject = null;
+                    }
+                    else if (!_firstSpan.IsEmpty)
+                    {
+                        _builder = Strings.GetSpanBasedStringBuilder();
+#if FEATURE_SPAN
+                        _builder.Append(FileUtilities.MaybeAdjustFilePath(_firstSpan));
+#else
+                        _builder.Append(FileUtilities.MaybeAdjustFilePath(_firstSpan.ToString()));
+#endif
+                        _firstSpan = new ReadOnlyMemory<char>();
+                    }
+                }
+
+                public void Dispose()
+                {
+                    _builder?.Dispose();
+                }
+
+                private object AdjustFilePath(object value)
+                {
+                    if (value is string stringValue)
+                    {
+                        return FileUtilities.MaybeAdjustFilePath(stringValue);
+                    }
+                    return value;
+                }
+
+                public object GetResult()
+                {
+                    if (_firstObject != null)
+                    {
+                        return AdjustFilePath(_firstObject);
+                    }
+                    if (!_firstSpan.IsEmpty)
+                    {
+#if FEATURE_SPAN
+                        return Strings.WeakIntern(FileUtilities.MaybeAdjustFilePath(_firstSpan).Span);
+#else
+                        return Strings.WeakIntern(FileUtilities.MaybeAdjustFilePath(_firstSpan.ToString()));
+#endif
+                    }
+                    return _builder?.ToString();
+                }
+            }
+
                 /// <summary>
                 /// This method takes a string which may contain any number of
                 /// "$(propertyname)" tags in it.  It replaces all those tags with
