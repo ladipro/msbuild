@@ -485,6 +485,42 @@ namespace Microsoft.Build.Shared
             return shouldAdjust ? newValue.ToString() : value;
         }
 
+#if !CLR2COMPATIBILITY
+        /// <summary>
+        /// If on Unix, convert backslashes to slashes for strings that resemble paths.
+        /// This overload takes and returns <see cref="ReadOnlyMemory{char}"/>.
+        /// </summary>
+        internal static ReadOnlyMemory<char> MaybeAdjustFilePath(ReadOnlyMemory<char> value, string baseDirectory = "")
+        {
+            if (NativeMethodsShared.IsWindows || value.IsEmpty)
+            {
+                return value;
+            }
+
+            // Don't bother with arrays or properties or network paths.
+            var span = value.Span;
+            if (span.Length >= 2)
+            {
+                if ((span[1] == '(' && (span[0] == '$' || span[0] == '@')) ||
+                    (span[1] == '\\' && span[0] == '\\'))
+                {
+                    return value;
+                }
+            }
+
+            // For Unix-like systems, we may want to convert backslashes to slashes
+#if FEATURE_SPAN
+            Span<char> newValue = ConvertToUnixSlashes(value.ToArray());
+#else
+            string newValue = ConvertToUnixSlashes(value.ToString());
+#endif
+
+            // Find the part of the name we want to check, that is remove quotes, if present
+            bool shouldAdjust = newValue.IndexOf('/') != -1 && LooksLikeUnixFilePath(RemoveQuotes(newValue), baseDirectory);
+            return shouldAdjust ? newValue.ToString().AsMemory() : value;
+        }
+#endif
+
 #if !FEATURE_SPAN
         private static string ConvertToUnixSlashes(string path)
         {
