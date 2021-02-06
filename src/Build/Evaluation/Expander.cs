@@ -1050,27 +1050,22 @@ namespace Microsoft.Build.Evaluation
                     _builder?.Dispose();
                 }
 
-                private object AdjustFilePath(object value)
-                {
-                    if (value is string stringValue)
-                    {
-                        return FileUtilities.MaybeAdjustFilePath(stringValue);
-                    }
-                    return value;
-                }
-
                 public object GetResult()
                 {
                     if (_firstObject != null)
                     {
-                        return AdjustFilePath(_firstObject);
+                        if (_firstObject is string stringValue)
+                        {
+                            return FileUtilities.MaybeAdjustFilePath(stringValue);
+                        }
+                        return _firstObject;
                     }
                     if (!_firstSpan.IsEmpty)
                     {
 #if FEATURE_SPAN
-                        return Strings.WeakIntern(FileUtilities.MaybeAdjustFilePath(_firstSpan).Span);
+                        return FileUtilities.MaybeAdjustFilePath(_firstSpan);
 #else
-                        return Strings.WeakIntern(FileUtilities.MaybeAdjustFilePath(_firstSpan.ToString()));
+                        return FileUtilities.MaybeAdjustFilePath(_firstSpan.ToString());
 #endif
                     }
                     return _builder?.ToString();
