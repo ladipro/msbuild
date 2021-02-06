@@ -488,7 +488,7 @@ namespace Microsoft.Build.Shared
 #if !CLR2COMPATIBILITY
         /// <summary>
         /// If on Unix, convert backslashes to slashes for strings that resemble paths.
-        /// This overload takes and returns <see cref="ReadOnlyMemory{char}"/>.
+        /// This overload takes and returns ReadOnlyMemory./>.
         /// </summary>
         internal static ReadOnlyMemory<char> MaybeAdjustFilePath(ReadOnlyMemory<char> value, string baseDirectory = "")
         {
