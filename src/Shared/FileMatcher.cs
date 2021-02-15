@@ -230,8 +230,8 @@ namespace Microsoft.Build.Shared
         /// <param name="path"></param>
         /// <param name="pattern"></param>
         /// <param name="fileSystem">The file system abstraction to use that implements file system operations</param>
-        /// <returns>An immutable array of matching file system entries (can be empty).</returns>
-        private static ImmutableArray<string> GetAccessibleFilesAndDirectories(IFileSystem fileSystem, string path, string pattern)
+        /// <returns>An enumerable of matching file system entries (can be empty).</returns>
+        private static IEnumerable<string> GetAccessibleFilesAndDirectories(IFileSystem fileSystem, string path, string pattern)
         {
             if (fileSystem.DirectoryExists(path))
             {
@@ -241,7 +241,7 @@ namespace Microsoft.Build.Shared
                         ? fileSystem.EnumerateFileSystemEntries(path, pattern)
                             .Where(o => IsMatch(Path.GetFileName(o), pattern))
                         : fileSystem.EnumerateFileSystemEntries(path, pattern)
-                        ).ToImmutableArray();
+                        );
                 }
                 // for OS security
                 catch (UnauthorizedAccessException)
@@ -255,7 +255,7 @@ namespace Microsoft.Build.Shared
                 }
             }
 
-            return ImmutableArray<string>.Empty;
+            return Array.Empty<string>();
         }
 
         /// <summary>
