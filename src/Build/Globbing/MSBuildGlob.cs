@@ -183,7 +183,6 @@ namespace Microsoft.Build.Globbing
                     out string fixedDirectoryPart,
                     out string wildcardDirectoryPart,
                     out string filenamePart,
-                    out string matchFileExpression,
                     out bool needsRecursion,
                     out bool isLegalFileSpec,
                     (fixedDirPart, wildcardDirPart, filePart) =>
@@ -196,6 +195,8 @@ namespace Microsoft.Build.Globbing
                 Regex regex = null;
                 if (isLegalFileSpec)
                 {
+                    string matchFileExpression = FileMatcher.RegularExpressionFromFileSpec(fixedDirectoryPart, wildcardDirectoryPart, filenamePart);
+
                     lock (s_regexCache)
                     {
                         s_regexCache.TryGetValue(matchFileExpression, out regex);
