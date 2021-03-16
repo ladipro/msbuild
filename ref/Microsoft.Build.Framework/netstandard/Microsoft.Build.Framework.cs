@@ -220,6 +220,7 @@ namespace Microsoft.Build.Framework
     }
     public partial interface IBuildEngine9 : Microsoft.Build.Framework.IBuildEngine, Microsoft.Build.Framework.IBuildEngine2, Microsoft.Build.Framework.IBuildEngine3, Microsoft.Build.Framework.IBuildEngine4, Microsoft.Build.Framework.IBuildEngine5, Microsoft.Build.Framework.IBuildEngine6, Microsoft.Build.Framework.IBuildEngine7, Microsoft.Build.Framework.IBuildEngine8
     {
+        Microsoft.Build.Framework.LoggerVerbosity MaximumGuaranteedLoggerVerbosity { get; }
         void ReleaseCores(int coresToRelease);
         int RequestCores(int requestedCores);
     }

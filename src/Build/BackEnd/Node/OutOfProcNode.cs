@@ -758,6 +758,8 @@ namespace Microsoft.Build.Execution
                 _loggingService.IncludeEvaluationPropertiesAndItems = true;
             }
 
+            _loggingService.SetMaximumGuaranteedVerbosity(configuration.MaximumGuaranteedLoggerVerbosity);
+
             try
             {
                 // If there are no node loggers to initialize dont do anything

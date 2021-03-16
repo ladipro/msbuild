@@ -491,6 +491,8 @@ namespace Microsoft.Build.CommandLine
             throw new NotImplementedException();
         }
 
+        public LoggerVerbosity MaximumGuaranteedLoggerVerbosity => LoggerVerbosity.Diagnostic;
+
         #endregion
 #endif
 

@@ -1801,6 +1801,8 @@ namespace Microsoft.Build.Evaluation
             /// </summary>
             private readonly ILogger _originalLogger;
 
+            internal ILogger OriginalLogger => _originalLogger;
+
             /// <summary>
             /// The design-time event source
             /// </summary>

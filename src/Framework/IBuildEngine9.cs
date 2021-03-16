@@ -21,5 +21,10 @@ namespace Microsoft.Build.Framework
         /// </summary>
         /// <param name="coresToRelease">Number of cores no longer in use.</param>
         void ReleaseCores(int coresToRelease);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        LoggerVerbosity MaximumGuaranteedLoggerVerbosity { get; }
     }
 }

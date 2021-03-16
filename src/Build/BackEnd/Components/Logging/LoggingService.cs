@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Shared;
+using static Microsoft.Build.Evaluation.ProjectCollection;
 using InternalLoggerException = Microsoft.Build.Exceptions.InternalLoggerException;
 using LoggerDescription = Microsoft.Build.Logging.LoggerDescription;
 
@@ -128,6 +129,11 @@ namespace Microsoft.Build.BackEnd.Logging
         /// passed to each node as they are created so that the forwarding loggers can be registered on them.
         /// </summary>
         private List<LoggerDescription> _loggerDescriptions;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private LoggerVerbosity _maximumGuaranteedVerbosity;
 
         /// <summary>
         /// The event source to which filters will listen to get the build events which are logged to the logging service through the
@@ -266,6 +272,7 @@ namespace Microsoft.Build.BackEnd.Logging
             _logMode = loggerMode;
             _loggers = new List<ILogger>();
             _loggerDescriptions = new List<LoggerDescription>();
+            _maximumGuaranteedVerbosity = LoggerVerbosity.Quiet;
             _eventSinkDictionary = new Dictionary<int, IBuildEventSink>();
             _nodeId = nodeId;
             _configCache = new Lazy<IConfigCache>(() => (IConfigCache)_componentHost.GetComponent(BuildComponentType.ConfigCache), LazyThreadSafetyMode.PublicationOnly);
@@ -1064,52 +1071,49 @@ namespace Microsoft.Build.BackEnd.Logging
         /// <exception cref="InternalErrorException">buildEvent is null</exception>
         public void LogBuildEvent(BuildEventArgs buildEvent)
         {
-            lock (_lockObject)
+            ErrorUtilities.VerifyThrow(buildEvent != null, "buildEvent is null");
+
+            BuildWarningEventArgs warningEvent = null;
+            BuildErrorEventArgs errorEvent = null;
+            BuildMessageEventArgs messageEvent = null;
+
+            if ((warningEvent = buildEvent as BuildWarningEventArgs) != null && warningEvent.BuildEventContext != null && warningEvent.BuildEventContext.ProjectContextId != BuildEventContext.InvalidProjectContextId)
             {
-                ErrorUtilities.VerifyThrow(buildEvent != null, "buildEvent is null");
+                warningEvent.ProjectFile = GetAndVerifyProjectFileFromContext(warningEvent.BuildEventContext);
+            }
+            else if ((errorEvent = buildEvent as BuildErrorEventArgs) != null && errorEvent.BuildEventContext != null && errorEvent.BuildEventContext.ProjectContextId != BuildEventContext.InvalidProjectContextId)
+            {
+                errorEvent.ProjectFile = GetAndVerifyProjectFileFromContext(errorEvent.BuildEventContext);
+            }
+            else if ((messageEvent = buildEvent as BuildMessageEventArgs) != null && messageEvent.BuildEventContext != null && messageEvent.BuildEventContext.ProjectContextId != BuildEventContext.InvalidProjectContextId)
+            {
+                messageEvent.ProjectFile = GetAndVerifyProjectFileFromContext(messageEvent.BuildEventContext);
+            }
 
-                BuildWarningEventArgs warningEvent = null;
-                BuildErrorEventArgs errorEvent = null;
-                BuildMessageEventArgs messageEvent = null;
-
-                if ((warningEvent = buildEvent as BuildWarningEventArgs) != null && warningEvent.BuildEventContext != null && warningEvent.BuildEventContext.ProjectContextId != BuildEventContext.InvalidProjectContextId)
+            if (OnlyLogCriticalEvents)
+            {
+                // Only log certain events if OnlyLogCriticalEvents is true
+                if (
+                    (warningEvent != null)
+                    || (errorEvent != null)
+                    || (buildEvent is CustomBuildEventArgs)
+                    || (buildEvent is CriticalBuildMessageEventArgs)
+                    )
                 {
-                    warningEvent.ProjectFile = GetAndVerifyProjectFileFromContext(warningEvent.BuildEventContext);
-                }
-                else if ((errorEvent = buildEvent as BuildErrorEventArgs) != null && errorEvent.BuildEventContext != null && errorEvent.BuildEventContext.ProjectContextId != BuildEventContext.InvalidProjectContextId)
-                {
-                    errorEvent.ProjectFile = GetAndVerifyProjectFileFromContext(errorEvent.BuildEventContext);
-                }
-                else if ((messageEvent = buildEvent as BuildMessageEventArgs) != null && messageEvent.BuildEventContext != null && messageEvent.BuildEventContext.ProjectContextId != BuildEventContext.InvalidProjectContextId)
-                {
-                    messageEvent.ProjectFile = GetAndVerifyProjectFileFromContext(messageEvent.BuildEventContext);
-                }
-
-                if (OnlyLogCriticalEvents)
-                {
-                    // Only log certain events if OnlyLogCriticalEvents is true
-                    if (
-                        (warningEvent != null)
-                        || (errorEvent != null)
-                        || (buildEvent is CustomBuildEventArgs)
-                        || (buildEvent is CriticalBuildMessageEventArgs)
-                       )
-                    {
-                        ProcessLoggingEvent(buildEvent);
-                    }
-                }
-                else
-                {
-                    // Log all events if OnlyLogCriticalEvents is false
                     ProcessLoggingEvent(buildEvent);
                 }
+            }
+            else
+            {
+                // Log all events if OnlyLogCriticalEvents is false
+                ProcessLoggingEvent(buildEvent);
             }
         }
 
         #endregion
 
         /// <summary>
-        /// This method will becalled from multiple threads in asynchronous mode.
+        /// This method will be called from multiple threads in asynchronous mode.
         ///
         /// Determine where to send the buildevent either to the filters or to a specific sink.
         /// When in Asynchronous mode the event should to into the logging queue (as long as we are initialized).
@@ -1182,8 +1186,23 @@ namespace Microsoft.Build.BackEnd.Logging
 
         #endregion
 
-        #region Private Methods
-        private static int GetWarningsAsErrorOrMessageKey(BuildEventContext buildEventContext)
+        #region Logging optimization
+
+        public void SetMaximumGuaranteedVerbosity(LoggerVerbosity verbosity)
+        {
+            int newMaximum = Math.Max((int)_maximumGuaranteedVerbosity, (int)verbosity);
+            _maximumGuaranteedVerbosity = (LoggerVerbosity)newMaximum;
+        }
+
+        public LoggerVerbosity GetMaximumGuaranteedVerbosity()
+        {
+            return _maximumGuaranteedVerbosity;
+        }
+
+        #endregion
+
+    #region Private Methods
+    private static int GetWarningsAsErrorOrMessageKey(BuildEventContext buildEventContext)
         {
             var hash = 17;
             hash = (hash * 31) + buildEventContext.ProjectInstanceId;
@@ -1541,6 +1560,29 @@ namespace Microsoft.Build.BackEnd.Logging
                 InternalLoggerException.Throw(e, null, "FatalErrorWhileInitializingLogger", true, logger.GetType().Name);
             }
 
+            var innerLogger = (logger is ReusableLogger reusableLogger) ? reusableLogger.OriginalLogger : logger;
+            if (innerLogger is CentralForwardingLogger)
+            {
+                // Ignore this one, it's always set to Diagnostic and we handle remote logging explicitly.
+            }
+            else if (innerLogger is Execution.BuildManager.NullLogger)
+            {
+                // Ignore this one, it's null.
+            }
+            else if (innerLogger is Build.Logging.ConsoleLogger ||
+                    innerLogger is Build.Logging.ConfigurableForwardingLogger)
+            {
+                // This is one of the commonly used logger owned by us. We know it respects verbosity.
+                int newMaxVerbosity = Math.Max((int)_maximumGuaranteedVerbosity, (int)innerLogger.Verbosity);
+                _maximumGuaranteedVerbosity = (LoggerVerbosity)newMaxVerbosity;
+            }
+            else
+            {
+                // If the logger is not on our whitelist, we can't guarantee that it respects verbosity.
+                // Default to "no guarantees".
+                _maximumGuaranteedVerbosity = LoggerVerbosity.Diagnostic;
+            }
+
             // Keep track of the loggers so they can be unregistered later on
             _loggers.Add(logger);
         }
@@ -1598,7 +1640,10 @@ namespace Microsoft.Build.BackEnd.Logging
         private string GetAndVerifyProjectFileFromContext(BuildEventContext context)
         {
             string projectFile;
-            _projectFileMap.TryGetValue(context.ProjectContextId, out projectFile);
+            lock (_lockObject)
+            {
+                _projectFileMap.TryGetValue(context.ProjectContextId, out projectFile);
+            }
 
             // PERF: Not using VerifyThrow to avoid boxing an int in the non-error case.
             if (projectFile == null)

@@ -2588,6 +2588,7 @@ namespace Microsoft.Build.Execution
                     loggingService.IncludeEvaluationProfile,
                     loggingService.IncludeEvaluationPropertiesAndItems,
                     loggingService.IncludeTaskInputs)
+                , loggingService.GetMaximumGuaranteedVerbosity()
                 );
             }
 
@@ -2942,7 +2943,7 @@ namespace Microsoft.Build.Execution
         /// <summary>
         /// The logger registered to the logging service when no other one is.
         /// </summary>
-        private class NullLogger : ILogger
+        internal class NullLogger : ILogger
         {
             #region ILogger Members
 

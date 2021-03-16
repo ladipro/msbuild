@@ -866,6 +866,11 @@ namespace Microsoft.Build.BackEnd
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public LoggerVerbosity MaximumGuaranteedLoggerVerbosity => _taskLoggingContext.LoggingService.GetMaximumGuaranteedVerbosity();
+
         #endregion
 
         /// <summary>

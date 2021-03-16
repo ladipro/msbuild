@@ -11,6 +11,7 @@ namespace Microsoft.Build.BackEnd
     /// <summary>
     /// NodeConfiguration contains all of the information necessary for a node to configure itself for building.
     /// </summary>
+    /// BAGR: Node config!
     internal class NodeConfiguration : INodePacket
     {
         /// <summary>
@@ -40,6 +41,11 @@ namespace Microsoft.Build.BackEnd
         /// </summary>
         private LoggingNodeConfiguration _loggingNodeConfiguration;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        private Framework.LoggerVerbosity _maximumGuaranteedLoggerVerbosity;
+
 #pragma warning disable 1572 // appDomainSetup not always there
         /// <summary>
         /// Constructor
@@ -49,6 +55,7 @@ namespace Microsoft.Build.BackEnd
         /// <param name="forwardingLoggers">The forwarding loggers.</param>
         /// <param name="appDomainSetup">The AppDomain setup information.</param>
         /// <param name="loggingNodeConfiguration">The logging configuration for the node.</param>
+        /// <param name="maximumGuaranteedLoggerVerbosity"></param>
         public NodeConfiguration
             (
             int nodeId,
@@ -57,7 +64,8 @@ namespace Microsoft.Build.BackEnd
 #if FEATURE_APPDOMAIN
             AppDomainSetup appDomainSetup,
 #endif
-            LoggingNodeConfiguration loggingNodeConfiguration
+            LoggingNodeConfiguration loggingNodeConfiguration,
+            Framework.LoggerVerbosity maximumGuaranteedLoggerVerbosity
             )
         {
             _nodeId = nodeId;
@@ -67,6 +75,7 @@ namespace Microsoft.Build.BackEnd
             _appDomainSetup = appDomainSetup;
 #endif
             _loggingNodeConfiguration = loggingNodeConfiguration;
+            _maximumGuaranteedLoggerVerbosity = maximumGuaranteedLoggerVerbosity;
         }
 #pragma warning restore
 
@@ -133,7 +142,17 @@ namespace Microsoft.Build.BackEnd
             { return _loggingNodeConfiguration; }
         }
 
-#region INodePacket Members
+        /// <summary>
+        /// 
+        /// </summary>
+        public Framework.LoggerVerbosity MaximumGuaranteedLoggerVerbosity
+        {
+            [DebuggerStepThrough]
+            get
+            { return _maximumGuaranteedLoggerVerbosity; }
+        }
+
+        #region INodePacket Members
 
         /// <summary>
         /// Retrieves the packet type.
@@ -162,6 +181,7 @@ namespace Microsoft.Build.BackEnd
             translator.TranslateDotNet(ref _appDomainSetup);
 #endif
             translator.Translate(ref _loggingNodeConfiguration);
+            translator.TranslateEnum(ref _maximumGuaranteedLoggerVerbosity, (int)_maximumGuaranteedLoggerVerbosity);
         }
 
         /// <summary>
@@ -185,6 +205,7 @@ namespace Microsoft.Build.BackEnd
                 , _appDomainSetup
 #endif
                 , _loggingNodeConfiguration
+                , _maximumGuaranteedLoggerVerbosity
                 );
         }
     }

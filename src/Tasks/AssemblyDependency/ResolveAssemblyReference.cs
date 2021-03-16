@@ -955,7 +955,7 @@ namespace Microsoft.Build.Tasks
                 we avoid the String.Formats that would normally occur even if the verbosity was set to 
                 quiet at the engine level.
                 */
-                if (!Silent)
+                if (!Silent && BuildEngine9.MaximumGuaranteedLoggerVerbosity >= LoggerVerbosity.Detailed)
                 {
                     // First, loop over primaries and display information.
                     foreach (AssemblyNameExtension assemblyName in dependencyTable.References.Keys)
@@ -1320,7 +1320,7 @@ namespace Microsoft.Build.Tasks
                 return;
             }
 
-            if (!Silent)
+            if (!Silent && BuildEngine9.MaximumGuaranteedLoggerVerbosity >= LoggerVerbosity.Detailed)
             {
                 Log.LogMessageFromResources(MessageImportance.Low, "ResolveAssemblyReference.LogTaskPropertyFormat", "TargetFrameworkMoniker");
                 Log.LogMessageFromResources(MessageImportance.Low, "ResolveAssemblyReference.FourSpaceIndent", _targetedFrameworkMoniker);
@@ -2758,7 +2758,7 @@ namespace Microsoft.Build.Tasks
                 {
                     if (String.Equals(fullSubsetName, subsetName, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (!_silent)
+                        if (!_silent && BuildEngine9.MaximumGuaranteedLoggerVerbosity >= LoggerVerbosity.Detailed)
                         {
                             Log.LogMessageFromResources(MessageImportance.Low, "ResolveAssemblyReference.NoExclusionListBecauseofFullClientName", subsetName);
                         }
@@ -2780,7 +2780,7 @@ namespace Microsoft.Build.Tasks
                 return false;
             }
 
-            if (!_silent)
+            if (!_silent && BuildEngine9.MaximumGuaranteedLoggerVerbosity >= LoggerVerbosity.Detailed)
             {
                 Log.LogMessageFromResources(MessageImportance.Low, "ResolveAssemblyReference.UsingExclusionList");
             }
@@ -3026,6 +3026,8 @@ namespace Microsoft.Build.Tasks
         /// <returns>True if there was success.</returns>
         public override bool Execute()
         {
+            Log.LogMessage(MessageImportance.High, "Maximum guaranteed logger verbosity: {0}", BuildEngine9.MaximumGuaranteedLoggerVerbosity);
+
             return Execute
             (
                 new FileExists(p => FileUtilities.FileExistsNoThrow(p)),

@@ -156,9 +156,14 @@ namespace Microsoft.Build.Utilities
         /// </summary>
         public bool HasLoggedErrors { get; private set; }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public LoggerVerbosity MaximumGuaranteedVerbosity => ((IBuildEngine9)BuildEngine).MaximumGuaranteedLoggerVerbosity;
+
 #endregion
 
-#region Utility methods
+        #region Utility methods
 
         /// <summary>
         /// Extracts the message code (if any) prefixed to the given message string. Message code prefixes must match the

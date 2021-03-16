@@ -536,6 +536,14 @@ namespace Microsoft.Build.BackEnd.Logging
         /// <param name="properties">The list of properties associated with the event.</param>
         void LogTelemetry(BuildEventContext buildEventContext, string eventName, IDictionary<string, string> properties);
         #endregion
+
+        #region Logging optimization
+
+        void SetMaximumGuaranteedVerbosity(LoggerVerbosity verbosity);
+
+        LoggerVerbosity GetMaximumGuaranteedVerbosity();
+
+        #endregion
     }
 
     /// <summary>

@@ -584,6 +584,16 @@ namespace Microsoft.Build.UnitTests.BackEnd
             throw new NotImplementedException();
         }
 
+        public void SetMaximumGuaranteedVerbosity(LoggerVerbosity verbosity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public LoggerVerbosity GetMaximumGuaranteedVerbosity()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
     }
 }
