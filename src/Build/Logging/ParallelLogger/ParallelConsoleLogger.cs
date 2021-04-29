@@ -1090,23 +1090,8 @@ namespace Microsoft.Build.BackEnd.Logging
             }
             else
             {
-                switch (e.Importance)
-                {
-                    case MessageImportance.High:
-                        print = IsVerbosityAtLeast(LoggerVerbosity.Minimal);
-                        break;
-                    case MessageImportance.Normal:
-                        print = IsVerbosityAtLeast(LoggerVerbosity.Normal);
-                        lightenText = true;
-                        break;
-                    case MessageImportance.Low:
-                        print = IsVerbosityAtLeast(LoggerVerbosity.Detailed);
-                        lightenText = true;
-                        break;
-                    default:
-                        ErrorUtilities.VerifyThrow(false, "Impossible");
-                        break;
-                }
+                LoggerVerbosity minimumVerbosity = ImportanceToMinimumVerbosity(e.Importance, out lightenText);
+                print = IsVerbosityAtLeast(minimumVerbosity);
             }
 
             if (print)
