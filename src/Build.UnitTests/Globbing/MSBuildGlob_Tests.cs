@@ -337,7 +337,7 @@ namespace Microsoft.Build.Engine.UnitTests.Globbing
             @"a/b/\c",
             @"d/e\/*b*/\*.cs",
             @"d\e\\abc/\a.cs",
-            @"d\e\\", @"abc\\", @"a.cs")]
+            @"d\e\\", @"abc\", @"a.cs")]
         public void GlobMatchingIgnoresSlashOrientationAndRepetitions(string globRoot, string fileSpec, string stringToMatch,
             string fixedDirectoryPart, string wildcardDirectoryPart, string filenamePart)
         {
@@ -350,11 +350,12 @@ namespace Microsoft.Build.Engine.UnitTests.Globbing
 
             string NormalizeSlashes(string path)
             {
-                string normalized = path.Replace(Path.DirectorySeparatorChar == '/' ? '\\' : '/', Path.DirectorySeparatorChar);
-                return NativeMethodsShared.IsWindows ? normalized.Replace("\\\\", "\\") : normalized;
+                return path.Replace(Path.DirectorySeparatorChar == '/' ? '\\' : '/', Path.DirectorySeparatorChar);
             }
 
-            Assert.Equal(NormalizeSlashes(Path.Combine(FileUtilities.NormalizePath(globRoot), fixedDirectoryPart)), result.FixedDirectoryPartMatchGroup);
+            var rootedFixedDirectoryPart = Path.Combine(FileUtilities.NormalizePath(globRoot), fixedDirectoryPart);
+
+            Assert.Equal(FileUtilities.GetFullPathNoThrow(rootedFixedDirectoryPart), result.FixedDirectoryPartMatchGroup);
             Assert.Equal(NormalizeSlashes(wildcardDirectoryPart), result.WildcardDirectoryPartMatchGroup);
             Assert.Equal(NormalizeSlashes(filenamePart), result.FilenamePartMatchGroup);
         }
